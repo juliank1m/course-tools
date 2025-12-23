@@ -9,6 +9,13 @@ const tools = [
     color: "blue",
   },
   {
+    name: "Vector Math",
+    description: "Vector operations, projections, and geometric equations",
+    href: "/tools/vectors",
+    category: "Math",
+    color: "blue",
+  },
+  {
     name: "Calculus",
     description: "Derivatives, integrals, limits, and series",
     href: "/tools/calculus",
@@ -21,13 +28,6 @@ const tools = [
     href: "/tools/chemistry",
     category: "Science",
     color: "pink",
-  },
-  {
-    name: "Vector Math",
-    description: "Vector operations, projections, and geometric equations",
-    href: "/tools/vectors",
-    category: "Math",
-    color: "blue",
   },
   {
     name: "Proofs",
