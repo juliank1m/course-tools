@@ -670,7 +670,7 @@ export default function LinearAlgebraPage() {
       <div className="max-w-6xl mx-auto">
         <Link
           href="/"
-          className="text-blue-600 hover:text-blue-800 hover:underline mb-6 inline-block font-medium transition-colors"
+          className="text-blue-600 hover:text-blue-800 hover:underline mb-6 inline-block font-medium transition-colors text-sm sm:text-base"
         >
           ← Back to Home
         </Link>

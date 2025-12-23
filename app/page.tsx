@@ -16,18 +16,18 @@ const tools = [
     color: "blue",
   },
   {
+    name: "CS Tools",
+    description: "Algorithm analysis, number conversions, and CS utilities",
+    href: "/tools/cs",
+    category: "Computer Science",
+    color: "green",
+  },
+  {
     name: "Calculus",
     description: "Derivatives, integrals, limits, and series",
     href: "/tools/calculus",
     category: "Math",
     color: "purple",
-  },
-  {
-    name: "Chemistry",
-    description: "Molar mass, stoichiometry, and chemical calculations",
-    href: "/tools/chemistry",
-    category: "Science",
-    color: "pink",
   },
   {
     name: "Proofs",
@@ -37,11 +37,11 @@ const tools = [
     color: "purple",
   },
   {
-    name: "CS Tools",
-    description: "Algorithm analysis, number conversions, and CS utilities",
-    href: "/tools/cs",
-    category: "Computer Science",
-    color: "green",
+    name: "Chemistry",
+    description: "Molar mass, stoichiometry, and chemical calculations",
+    href: "/tools/chemistry",
+    category: "Science",
+    color: "pink",
   },
 ];
 
