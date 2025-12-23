@@ -666,7 +666,7 @@ export default function LinearAlgebraPage() {
   };
 
   return (
-    <main className="min-h-screen p-8 bg-gradient-to-br from-pink-50/60 via-blue-50/60 to-purple-50/60">
+    <main className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-pink-50/60 via-blue-50/60 to-purple-50/60">
       <div className="max-w-6xl mx-auto">
         <Link
           href="/"
@@ -676,24 +676,24 @@ export default function LinearAlgebraPage() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2">
             <span className="text-gray-800">Linear Algebra </span>
             <span className="text-blue-600">Calculator</span>
           </h1>
-          <p className="text-gray-600 text-lg">Perform matrix operations and analyze linear transformations</p>
+          <p className="text-gray-600 text-base sm:text-lg">Perform matrix operations and analyze linear transformations</p>
         </div>
 
         <div className="mb-8 p-4 bg-blue-50/50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-blue-600 font-semibold text-lg">Matrix Dimensions:</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
+            <span className="text-blue-600 font-semibold text-base sm:text-lg whitespace-nowrap">Matrix Dimensions:</span>
             
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-700 text-sm">Rows:</span>
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-gray-700 text-xs sm:text-sm whitespace-nowrap">Rows:</span>
                 <button
                   onClick={() => updateMatrixRows(Math.max(1, matrixRows - 1))}
                   disabled={matrixRows <= 1}
-                  className="px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors"
+                  className="px-1.5 sm:px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors text-sm sm:text-base"
                 >
                   −
                 </button>
@@ -715,25 +715,25 @@ export default function LinearAlgebraPage() {
                       updateMatrixRows(clamped);
                     }
                   }}
-                  className="px-3 py-1 bg-white border-2 border-blue-300 rounded-lg text-gray-700 font-bold min-w-[40px] text-center focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="px-2 sm:px-3 py-1 bg-white border-2 border-blue-300 rounded-lg text-gray-700 font-bold w-12 sm:min-w-[40px] text-center text-sm sm:text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
                 <button
                   onClick={() => updateMatrixRows(Math.min(10, matrixRows + 1))}
                   disabled={matrixRows >= 10}
-                  className="px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors"
+                  className="px-1.5 sm:px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors text-sm sm:text-base"
                 >
                   +
                 </button>
               </div>
               
-              <span className="text-gray-400 text-xl">×</span>
+              <span className="text-gray-400 text-lg sm:text-xl">×</span>
               
-              <div className="flex items-center gap-2">
-                <span className="text-gray-700 text-sm">Cols:</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-gray-700 text-xs sm:text-sm whitespace-nowrap">Cols:</span>
                 <button
                   onClick={() => updateMatrixCols(Math.max(1, matrixCols - 1))}
                   disabled={matrixCols <= 1}
-                  className="px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors"
+                  className="px-1.5 sm:px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors text-sm sm:text-base"
                 >
                   −
                 </button>
@@ -755,26 +755,26 @@ export default function LinearAlgebraPage() {
                       updateMatrixCols(clamped);
                     }
                   }}
-                  className="px-3 py-1 bg-white border-2 border-blue-300 rounded-lg text-gray-700 font-bold min-w-[40px] text-center focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="px-2 sm:px-3 py-1 bg-white border-2 border-blue-300 rounded-lg text-gray-700 font-bold w-12 sm:min-w-[40px] text-center text-sm sm:text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
                 <button
                   onClick={() => updateMatrixCols(Math.min(10, matrixCols + 1))}
                   disabled={matrixCols >= 10}
-                  className="px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors"
+                  className="px-1.5 sm:px-2 py-1 bg-blue-200 text-blue-700 rounded-lg hover:bg-blue-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors text-sm sm:text-base"
                 >
                   +
                 </button>
               </div>
             </div>
             
-            <div className="flex items-center gap-2 ml-4">
-              <span className="text-gray-600 text-sm">Quick select:</span>
+            <div className="flex items-center gap-2 sm:ml-4 flex-wrap">
+              <span className="text-gray-600 text-xs sm:text-sm whitespace-nowrap">Quick select:</span>
               <div className="flex gap-1">
                 {[2, 3, 4, 5].map((size) => (
                   <button
                     key={size}
                     onClick={() => updateMatrixSize(size)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                       isSquare && matrixRows === size
                         ? "bg-blue-500 text-white"
                         : "bg-white text-gray-700 hover:bg-blue-100 border border-blue-200"
@@ -794,7 +794,7 @@ export default function LinearAlgebraPage() {
             <h2 className="text-xl font-bold text-gray-800 px-4">Operations</h2>
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-3">
             <button
               onClick={calculateDeterminant}
               disabled={!isSquare}
@@ -884,8 +884,8 @@ export default function LinearAlgebraPage() {
               <div className="w-2 h-2 rounded-full bg-blue-500"></div>
               <h2 className="text-xl font-bold text-gray-800">Matrix A</h2>
             </div>
-            <div className="inline-block border-2 border-blue-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md overflow-x-auto max-w-full">
-              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${matrixCols}, minmax(64px, auto))` }}>
+            <div className="inline-block border-2 border-blue-300 bg-white/80 backdrop-blur-sm p-2 sm:p-4 rounded-lg shadow-md overflow-x-auto max-w-full">
+              <div className="grid gap-1 sm:gap-2" style={{ gridTemplateColumns: `repeat(${matrixCols}, minmax(48px, auto))` }}>
                 {matrix.map((row, i) =>
                   row.map((val, j) => (
                     <input
@@ -895,7 +895,7 @@ export default function LinearAlgebraPage() {
                       value={val}
                       onChange={(e) => updateMatrixValue(i, j, e.target.value)}
                       onKeyDown={(e) => handleMatrixKeyDown(e, i, j, "A")}
-                      className="w-16 px-2 py-1 text-center border-2 border-blue-200 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium"
+                      className="w-12 sm:w-16 px-1 sm:px-2 py-1 text-center border-2 border-blue-200 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-sm sm:text-base"
                     />
                   ))
                 )}
@@ -937,7 +937,7 @@ export default function LinearAlgebraPage() {
                         updateMatrixBCols(clamped);
                       }
                     }}
-                    className="px-2 py-1 bg-white border-2 border-purple-300 rounded-lg text-gray-700 font-bold w-12 text-center text-xs focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    className="px-2 py-1 bg-white border-2 border-purple-300 rounded-lg text-gray-700 font-bold w-10 sm:w-12 text-center text-xs focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
                   />
                   <button
                     onClick={() => updateMatrixBCols(Math.min(10, matrixBCols + 1))}
@@ -949,8 +949,8 @@ export default function LinearAlgebraPage() {
                   <span className="text-gray-500 text-xs ml-1">({matrixB.length}×{matrixBCols})</span>
                 </div>
               </div>
-              <div className="inline-block border-2 border-purple-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md overflow-x-auto max-w-full">
-                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${matrixBCols}, minmax(64px, auto))` }}>
+              <div className="inline-block border-2 border-purple-300 bg-white/80 backdrop-blur-sm p-2 sm:p-4 rounded-lg shadow-md overflow-x-auto max-w-full">
+                <div className="grid gap-1 sm:gap-2" style={{ gridTemplateColumns: `repeat(${matrixBCols}, minmax(48px, auto))` }}>
                   {matrixB.map((row, i) =>
                     row.map((val, j) => (
                       <input
@@ -960,7 +960,7 @@ export default function LinearAlgebraPage() {
                         value={val}
                         onChange={(e) => updateMatrixBValue(i, j, e.target.value)}
                         onKeyDown={(e) => handleMatrixKeyDown(e, i, j, "B")}
-                        className="w-16 px-2 py-1 text-center border-2 border-purple-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 font-medium"
+                        className="w-12 sm:w-16 px-1 sm:px-2 py-1 text-center border-2 border-purple-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 font-medium text-sm sm:text-base"
                       />
                     ))
                   )}

@@ -294,12 +294,13 @@ export default function VectorsPage() {
     };
 
     return (
-      <div className="mt-8 p-6 bg-white/80 backdrop-blur-sm border-2 border-green-200 rounded-xl shadow-md">
+      <div className="mt-8 p-4 sm:p-6 bg-white/80 backdrop-blur-sm border-2 border-green-200 rounded-xl shadow-md">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <h3 className="text-lg font-bold text-gray-800">2D Visualization</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-800">2D Visualization</h3>
         </div>
-        <svg width={size} height={size} className="border border-gray-200 rounded-lg bg-white">
+        <div className="overflow-x-auto">
+          <svg width={size} height={size} className="border border-gray-200 rounded-lg bg-white min-w-[300px] max-w-full" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet">
           <defs>
             <marker
               id="arrowhead-blue"
@@ -400,12 +401,13 @@ export default function VectorsPage() {
             return null;
           })()}
         </svg>
+        </div>
       </div>
     );
   };
 
   return (
-    <main className="min-h-screen p-8 bg-gradient-to-br from-pink-50/60 via-blue-50/60 to-purple-50/60">
+    <main className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-pink-50/60 via-blue-50/60 to-purple-50/60">
       <div className="max-w-6xl mx-auto">
         <Link
           href="/"
@@ -415,19 +417,19 @@ export default function VectorsPage() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2">
             <span className="text-gray-800">Vector </span>
             <span className="text-green-600">Math</span>
           </h1>
-          <p className="text-gray-600 text-lg">Vector operations, projections, and geometric equations</p>
+          <p className="text-gray-600 text-base sm:text-lg">Vector operations, projections, and geometric equations</p>
         </div>
 
         <div className="mb-8 p-4 bg-green-50/50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-green-600 font-semibold text-lg">Dimension:</span>
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+            <span className="text-green-600 font-semibold text-base sm:text-lg whitespace-nowrap">Dimension:</span>
             <button
               onClick={() => updateDimension(2)}
-              className={`px-4 py-2 rounded-lg transition-all text-sm font-medium ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
                 dimension === 2
                   ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
                   : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
@@ -437,7 +439,7 @@ export default function VectorsPage() {
             </button>
             <button
               onClick={() => updateDimension(3)}
-              className={`px-4 py-2 rounded-lg transition-all text-sm font-medium ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
                 dimension === 3
                   ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
                   : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
@@ -517,7 +519,7 @@ export default function VectorsPage() {
                     type="text"
                     value={val}
                     onChange={(e) => updateVectorValue(0, i, e.target.value)}
-                    className="w-20 px-2 py-1 text-center border-2 border-blue-200 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium"
+                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-blue-200 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-sm sm:text-base"
                     placeholder="0"
                   />
                 ))}
@@ -538,7 +540,7 @@ export default function VectorsPage() {
                     type="text"
                     value={val}
                     onChange={(e) => updateVectorValue(1, i, e.target.value)}
-                    className="w-20 px-2 py-1 text-center border-2 border-purple-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 font-medium"
+                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-purple-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 font-medium text-sm sm:text-base"
                     placeholder="0"
                   />
                 ))}
@@ -560,7 +562,7 @@ export default function VectorsPage() {
                       type="text"
                       value={val}
                       onChange={(e) => updateVectorValue(2, i, e.target.value)}
-                      className="w-20 px-2 py-1 text-center border-2 border-pink-200 rounded-lg bg-white text-gray-700 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 font-medium"
+                      className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-pink-200 rounded-lg bg-white text-gray-700 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 font-medium text-sm sm:text-base"
                       placeholder="0"
                     />
                   ))}
@@ -580,7 +582,7 @@ export default function VectorsPage() {
                   type="text"
                   value={linearCombCoeffs[0]}
                   onChange={(e) => updateCoeffValue(0, e.target.value)}
-                  className="w-20 px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium"
+                  className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium text-sm sm:text-base"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -589,7 +591,7 @@ export default function VectorsPage() {
                   type="text"
                   value={linearCombCoeffs[1]}
                   onChange={(e) => updateCoeffValue(1, e.target.value)}
-                  className="w-20 px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium"
+                  className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium text-sm sm:text-base"
                 />
               </div>
             </div>
@@ -611,7 +613,7 @@ export default function VectorsPage() {
                       type="text"
                       value={val}
                       onChange={(e) => updateProjectionVector(i, e.target.value, false)}
-                      className="w-20 px-2 py-1 text-center border-2 border-teal-200 rounded-lg bg-white text-gray-700 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200 font-medium"
+                      className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-teal-200 rounded-lg bg-white text-gray-700 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200 font-medium text-sm sm:text-base"
                       placeholder="0"
                     />
                   ))}
@@ -631,7 +633,7 @@ export default function VectorsPage() {
                       type="text"
                       value={val}
                       onChange={(e) => updateProjectionVector(i, e.target.value, true)}
-                      className="w-20 px-2 py-1 text-center border-2 border-cyan-200 rounded-lg bg-white text-gray-700 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200 font-medium"
+                      className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-cyan-200 rounded-lg bg-white text-gray-700 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200 font-medium text-sm sm:text-base"
                       placeholder="0"
                     />
                   ))}

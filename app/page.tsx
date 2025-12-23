@@ -53,7 +53,7 @@ export default function Home() {
           <span className="text-gray-800">Course </span>
           <span className="text-blue-600">Tools</span>
         </h1>
-        <p className="text-xl text-gray-600 mb-12">
+        <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-12">
           A collection of helpful calculators and utilities for your academic courses
         </p>
 
@@ -75,10 +75,10 @@ export default function Home() {
               <Link
                 key={tool.name}
                 href={tool.href}
-                className={`block p-6 border-2 rounded-lg hover:shadow-md transition-all backdrop-blur-sm ${colorClasses[tool.color as keyof typeof colorClasses]}`}
+                className={`block p-4 sm:p-6 border-2 rounded-lg hover:shadow-md transition-all backdrop-blur-sm ${colorClasses[tool.color as keyof typeof colorClasses]}`}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h2 className="text-xl font-semibold text-gray-800">{tool.name}</h2>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tool.name}</h2>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${badgeClasses[tool.color as keyof typeof badgeClasses]}`}>
                     {tool.category}
                   </span>
