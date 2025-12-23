@@ -229,28 +229,8 @@ export default function LinearAlgebraPage() {
   };
 
   const formatVector = (vec: number[], label: string = ""): string => {
-    const formatted = vec.map(formatNumber);
-    const maxWidth = Math.max(...formatted.map((s) => s.length), 6);
-    const padded = formatted.map((s) => s.padStart(maxWidth));
-    
-    // Calculate label width for alignment
-    const labelPrefix = label ? `${label} = ` : "";
-    const labelWidth = labelPrefix.length;
-    const spacer = " ".repeat(labelWidth);
-    
-    let result = "";
-    
-    if (vec.length === 1) {
-      result += labelPrefix + "┌ " + padded[0] + " ┐";
-    } else {
-      result += labelPrefix + "┌ " + padded[0] + " ┐\n";
-      for (let i = 1; i < padded.length - 1; i++) {
-        result += spacer + "│ " + padded[i] + " │\n";
-      }
-      result += spacer + "└ " + padded[padded.length - 1] + " ┘";
-    }
-    
-    return result;
+    const formatted = vec.map(formatNumber).join(", ");
+    return label ? `${label} = (${formatted})` : `(${formatted})`;
   };
 
   const calculateDeterminant = () => {

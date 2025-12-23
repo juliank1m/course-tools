@@ -70,9 +70,7 @@ export default function VectorsPage() {
   };
 
   const formatPlaneVectorForm = (v1: Vector, v2: Vector): string => {
-    const formatted1 = v1.map(formatNumber).join(", ");
-    const formatted2 = v2.map(formatNumber).join(", ");
-    return `r = s(${formatted1}) + t(${formatted2})`;
+    return `r = s${formatVector(v1)} + t${formatVector(v2)}`;
   };
 
   const updateDimension = (dim: number) => {
@@ -212,7 +210,7 @@ export default function VectorsPage() {
         return;
       }
       let resultStr = `Vector form:\n`;
-      resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+      resultStr += `r = t${formatVector(direction)}\n\n`;
       
       resultStr += `Parametric form:\n`;
       if (Math.abs(direction[0]) > 1e-10) {
@@ -242,7 +240,7 @@ export default function VectorsPage() {
         return;
       }
       let resultStr = `Vector form:\n`;
-      resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+      resultStr += `r = t${formatVector(direction)}\n\n`;
       
       resultStr += `Parametric form:\n`;
       const parts: string[] = [];
@@ -645,7 +643,7 @@ export default function VectorsPage() {
           return;
         }
         let resultStr = `Vector form:\n`;
-        resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+        resultStr += `r = t${formatVector(direction)}\n\n`;
         
         resultStr += `Parametric form:\n`;
         if (Math.abs(direction[0]) > 1e-10) {
@@ -675,7 +673,7 @@ export default function VectorsPage() {
           return;
         }
         let resultStr = `Vector form:\n`;
-        resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+        resultStr += `r = t${formatVector(direction)}\n\n`;
         
         resultStr += `Parametric form:\n`;
         const parts: string[] = [];
