@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 type Vector = number[];
@@ -9,10 +9,13 @@ export default function VectorsPage() {
   const [vector1, setVector1] = useState<string[]>(["1", "0", "0"]);
   const [vector2, setVector2] = useState<string[]>(["0", "1", "0"]);
   const [vector3, setVector3] = useState<string[]>(["0", "0", "1"]);
+  const [vector4, setVector4] = useState<string[]>(["0", "0", "0", "1"]);
+  const [vector5, setVector5] = useState<string[]>(["0", "0", "0", "0", "1"]);
+  const [numVectors, setNumVectors] = useState(1);
   const [dimension, setDimension] = useState(3);
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
   const [result, setResult] = useState<string>("");
-  const [linearCombCoeffs, setLinearCombCoeffs] = useState<string[]>(["1", "1"]);
+  const [linearCombCoeffs, setLinearCombCoeffs] = useState<string[]>(["1", "1", "", "", ""]);
   const [projectionVector, setProjectionVector] = useState<string[]>(["1", "0", "0"]);
   const [projectionOnto, setProjectionOnto] = useState<string[]>(["0", "1", "0"]);
 
@@ -34,13 +37,46 @@ export default function VectorsPage() {
     return parseFloat(fixed).toString();
   };
 
+  const toSubscript = (num: number): string => {
+    const subscripts = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉"];
+    return num.toString().split("").map(d => subscripts[parseInt(d)]).join("");
+  };
+
+  const formatVectorVar = (num: number): string => {
+    return `v⃗${toSubscript(num)}`;
+  };
+
   const formatVector = (vec: Vector, name?: string): string => {
     const formatted = vec.map(formatNumber).join(", ");
     return name ? `${name} = (${formatted})` : `(${formatted})`;
   };
 
+  const formatVectorVertical = (vec: Vector): string => {
+    const formatted = vec.map(formatNumber);
+    const maxWidth = Math.max(...formatted.map((s) => s.length), 1);
+    const padded = formatted.map((s) => s.padStart(maxWidth));
+    
+    if (vec.length === 1) {
+      return "┌ " + padded[0] + " ┐";
+    }
+    
+    let result = "┌ " + padded[0] + " ┐\n";
+    for (let i = 1; i < padded.length - 1; i++) {
+      result += "│ " + padded[i] + " │\n";
+    }
+    result += "└ " + padded[padded.length - 1] + " ┘";
+    
+    return result;
+  };
+
+  const formatPlaneVectorForm = (v1: Vector, v2: Vector): string => {
+    const formatted1 = v1.map(formatNumber).join(", ");
+    const formatted2 = v2.map(formatNumber).join(", ");
+    return `r = s(${formatted1}) + t(${formatted2})`;
+  };
+
   const updateDimension = (dim: number) => {
-    if (dim < 2 || dim > 3) return;
+    if (dim < 2 || dim > 5) return;
     setDimension(dim);
     const padVector = (vec: string[], targetDim: number) => {
       const newVec = [...vec];
@@ -50,16 +86,40 @@ export default function VectorsPage() {
     setVector1(padVector(vector1, dim));
     setVector2(padVector(vector2, dim));
     setVector3(padVector(vector3, dim));
+    setVector4(padVector(vector4, dim));
+    setVector5(padVector(vector5, dim));
     setProjectionVector(padVector(projectionVector, dim));
     setProjectionOnto(padVector(projectionOnto, dim));
     setResult("");
   };
 
+  const addVector = () => {
+    if (numVectors >= 5) return;
+    setNumVectors(numVectors + 1);
+    // Ensure coefficients array has enough elements
+    const newCoeffs = [...linearCombCoeffs];
+    while (newCoeffs.length < numVectors + 1) newCoeffs.push("");
+    setLinearCombCoeffs(newCoeffs);
+    // Don't clear result - useEffect will update it if operation is selected
+  };
+
+  const removeVector = () => {
+    if (numVectors <= 1) return;
+    setNumVectors(numVectors - 1);
+    // Don't clear result - useEffect will update it if operation is selected
+  };
+
   const calculateNorm = () => {
     setSelectedOperation("norm");
-    const v = parseVector(vector1);
-    const norm = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
-    setResult(`||v|| = ${formatNumber(norm)}`);
+    const vectors = [vector1, vector2, vector3, vector4, vector5];
+    let resultStr = "";
+    for (let i = 0; i < numVectors; i++) {
+      const v = parseVector(vectors[i]);
+      const norm = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
+      if (i > 0) resultStr += "\n";
+      resultStr += `||${formatVectorVar(i + 1)}|| = ${formatNumber(norm)}`;
+    }
+    setResult(resultStr);
   };
 
   const calculateDotProduct = () => {
@@ -71,7 +131,7 @@ export default function VectorsPage() {
       return;
     }
     const dot = v1.reduce((sum, val, i) => sum + val * v2[i], 0);
-    setResult(`${formatVector(v1, "v₁")} · ${formatVector(v2, "v₂")} = ${formatNumber(dot)}`);
+    setResult(`${formatVector(v1, "v⃗₁")} · ${formatVector(v2, "v⃗₂")} = ${formatNumber(dot)}`);
   };
 
   const calculateCrossProduct = () => {
@@ -87,26 +147,45 @@ export default function VectorsPage() {
       v1[2] * v2[0] - v1[0] * v2[2],
       v1[0] * v2[1] - v1[1] * v2[0],
     ];
-    setResult(`${formatVector(v1, "v₁")} × ${formatVector(v2, "v₂")} = ${formatVector(cross, "v₁ × v₂")}`);
+    setResult(`${formatVector(v1, "v⃗₁")} × ${formatVector(v2, "v⃗₂")} = ${formatVector(cross, "v⃗₁ × v⃗₂")}`);
   };
 
   const calculateLinearCombination = () => {
     setSelectedOperation("linearComb");
-    const v1 = parseVector(vector1);
-    const v2 = parseVector(vector2);
-    if (v1.length !== v2.length) {
-      setResult("Error: Vectors must have the same dimension");
+    const vectors = [vector1, vector2, vector3, vector4, vector5];
+    const parsedVectors = vectors.slice(0, numVectors).map(v => parseVector(v));
+    
+    // Check all vectors have same dimension
+    const firstDim = parsedVectors[0].length;
+    if (!parsedVectors.every(v => v.length === firstDim)) {
+      setResult("Error: All vectors must have the same dimension");
       return;
     }
-    const c1 = parseFloat(linearCombCoeffs[0]) || 0;
-    const c2 = parseFloat(linearCombCoeffs[1]) || 0;
-    const resultVec = v1.map((val, i) => c1 * val + c2 * v2[i]);
-    setResult(`${formatNumber(c1)}${formatVector(v1, "v₁")} + ${formatNumber(c2)}${formatVector(v2, "v₂")} = ${formatVector(resultVec)}`);
+    
+    // Calculate linear combination
+    const resultVec = new Array(firstDim).fill(0);
+    let resultStr = "";
+    
+    for (let i = 0; i < numVectors; i++) {
+      const coeff = parseFloat(linearCombCoeffs[i]) || 0;
+      const vec = parsedVectors[i];
+      
+      for (let j = 0; j < firstDim; j++) {
+        resultVec[j] += coeff * vec[j];
+      }
+      
+      if (i > 0 && coeff >= 0) resultStr += " + ";
+      else if (i > 0) resultStr += " ";
+      resultStr += `${formatNumber(coeff)}${formatVectorVar(i + 1)}`;
+    }
+    
+    resultStr += ` = ${formatVector(resultVec)}`;
+    setResult(resultStr);
   };
 
   const calculateProjection = () => {
     setSelectedOperation("projection");
-    const v = parseVector(projectionVector);
+    const v = parseVector(vector1);
     const u = parseVector(projectionOnto);
     if (v.length !== u.length) {
       setResult("Error: Vectors must have the same dimension");
@@ -125,37 +204,131 @@ export default function VectorsPage() {
 
   const calculateLineEquation = () => {
     setSelectedOperation("line");
+    const direction = parseVector(vector1);
+    
     if (dimension === 2) {
-      const point = parseVector(vector1);
-      const direction = parseVector(vector2);
       if (Math.abs(direction[0]) < 1e-10 && Math.abs(direction[1]) < 1e-10) {
         setResult("Error: Direction vector cannot be zero");
         return;
       }
-      // Parametric form: r = point + t * direction
-      // Also show symmetric form if possible
-      let resultStr = `Parametric form:\n`;
-      resultStr += `x = ${formatNumber(point[0])} + ${formatNumber(direction[0])}t\n`;
-      resultStr += `y = ${formatNumber(point[1])} + ${formatNumber(direction[1])}t\n\n`;
+      let resultStr = `Vector form:\n`;
+      resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
       
-      if (Math.abs(direction[0]) > 1e-10 && Math.abs(direction[1]) > 1e-10) {
-        resultStr += `Symmetric form:\n`;
-        resultStr += `(x - ${formatNumber(point[0])}) / ${formatNumber(direction[0])} = (y - ${formatNumber(point[1])}) / ${formatNumber(direction[1])}`;
+      resultStr += `Parametric form:\n`;
+      if (Math.abs(direction[0]) > 1e-10) {
+        const coeff = formatNumber(direction[0]);
+        if (coeff === "1") {
+          resultStr += `x = t\n`;
+        } else if (coeff === "-1") {
+          resultStr += `x = -t\n`;
+        } else {
+          resultStr += `x = ${coeff}t\n`;
+        }
+      }
+      if (Math.abs(direction[1]) > 1e-10) {
+        const coeff = formatNumber(direction[1]);
+        if (coeff === "1") {
+          resultStr += `y = t`;
+        } else if (coeff === "-1") {
+          resultStr += `y = -t`;
+        } else {
+          resultStr += `y = ${coeff}t`;
+        }
       }
       setResult(resultStr);
-    } else {
-      const point = parseVector(vector1);
-      const direction = parseVector(vector2);
+    } else if (dimension === 3) {
       if (direction.every((val) => Math.abs(val) < 1e-10)) {
         setResult("Error: Direction vector cannot be zero");
         return;
       }
-      let resultStr = `Parametric form:\n`;
-      resultStr += `x = ${formatNumber(point[0])} + ${formatNumber(direction[0])}t\n`;
-      resultStr += `y = ${formatNumber(point[1])} + ${formatNumber(direction[1])}t\n`;
-      resultStr += `z = ${formatNumber(point[2])} + ${formatNumber(direction[2])}t`;
+      let resultStr = `Vector form:\n`;
+      resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+      
+      resultStr += `Parametric form:\n`;
+      const parts: string[] = [];
+      if (Math.abs(direction[0]) > 1e-10) {
+        const coeff = formatNumber(direction[0]);
+        if (coeff === "1") {
+          parts.push("x = t");
+        } else if (coeff === "-1") {
+          parts.push("x = -t");
+        } else {
+          parts.push(`x = ${coeff}t`);
+        }
+      }
+      if (Math.abs(direction[1]) > 1e-10) {
+        const coeff = formatNumber(direction[1]);
+        if (coeff === "1") {
+          parts.push("y = t");
+        } else if (coeff === "-1") {
+          parts.push("y = -t");
+        } else {
+          parts.push(`y = ${coeff}t`);
+        }
+      }
+      if (Math.abs(direction[2]) > 1e-10) {
+        const coeff = formatNumber(direction[2]);
+        if (coeff === "1") {
+          parts.push("z = t");
+        } else if (coeff === "-1") {
+          parts.push("z = -t");
+        } else {
+          parts.push(`z = ${coeff}t`);
+        }
+      }
+      resultStr += parts.join("\n");
       setResult(resultStr);
     }
+  };
+
+  const formatPlaneEquation = (coeffs: number[], d: number): string => {
+    const terms: string[] = [];
+    
+    const addTerm = (coeff: number, varName: string) => {
+      if (Math.abs(coeff) < 1e-10) return;
+      
+      const isFirst = terms.length === 0;
+      const absCoeff = Math.abs(coeff);
+      const isNegative = coeff < 0;
+      
+      if (absCoeff === 1) {
+        if (isFirst) {
+          terms.push(isNegative ? `-${varName}` : varName);
+        } else {
+          terms.push(isNegative ? `- ${varName}` : `+ ${varName}`);
+        }
+      } else {
+        const coeffStr = formatNumber(absCoeff);
+        if (isFirst) {
+          terms.push(isNegative ? `-${coeffStr}${varName}` : `${coeffStr}${varName}`);
+        } else {
+          terms.push(isNegative ? `- ${coeffStr}${varName}` : `+ ${coeffStr}${varName}`);
+        }
+      }
+    };
+    
+    addTerm(coeffs[0], "x");
+    addTerm(coeffs[1], "y");
+    addTerm(coeffs[2], "z");
+    
+    if (Math.abs(d) > 1e-10) {
+      const isFirst = terms.length === 0;
+      const absD = Math.abs(d);
+      const isNegative = d < 0;
+      const dStr = formatNumber(absD);
+      
+      if (isFirst) {
+        terms.push(isNegative ? `-${dStr}` : dStr);
+      } else {
+        terms.push(isNegative ? `- ${dStr}` : `+ ${dStr}`);
+      }
+    }
+    
+    if (terms.length === 0) {
+      return "0 = 0";
+    }
+    
+    return `${terms.join(" ")} = 0`;
   };
 
   const calculatePlaneEquation = () => {
@@ -164,9 +337,8 @@ export default function VectorsPage() {
       setResult("Error: Plane equation requires 3D vectors");
       return;
     }
-    const point = parseVector(vector1);
-    const v1 = parseVector(vector2);
-    const v2 = parseVector(vector3);
+    const v1 = parseVector(vector1);
+    const v2 = parseVector(vector2);
     
     // Calculate normal vector using cross product
     const normal = [
@@ -181,11 +353,114 @@ export default function VectorsPage() {
       return;
     }
     
-    const d = -(normal[0] * point[0] + normal[1] * point[1] + normal[2] * point[2]);
+    // Since no point is given, plane goes through origin, so d = 0
+    const d = 0;
     
-    let resultStr = `Plane equation:\n`;
-    resultStr += `${formatNumber(normal[0])}x + ${formatNumber(normal[1])}y + ${formatNumber(normal[2])}z + ${formatNumber(d)} = 0\n\n`;
-    resultStr += `Normal vector: ${formatVector(normal, "n")}`;
+    let resultStr = `Vector form:\n`;
+    resultStr += `${formatPlaneVectorForm(v1, v2)}\n\n`;
+    
+    resultStr += `Scalar form:\n`;
+    resultStr += `${formatPlaneEquation([normal[0], normal[1], normal[2]], d)}\n\n`;
+    
+    resultStr += `Parametric form:\n`;
+    const xParts: string[] = [];
+    const yParts: string[] = [];
+    const zParts: string[] = [];
+    
+    if (Math.abs(v1[0]) > 1e-10) {
+      const absCoeff = Math.abs(v1[0]);
+      const isNegative = v1[0] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (coeff === "1") {
+        xParts.push(isNegative ? "-s" : "s");
+      } else {
+        xParts.push(isNegative ? `-${coeff}s` : `${coeff}s`);
+      }
+    }
+    if (Math.abs(v2[0]) > 1e-10) {
+      const absCoeff = Math.abs(v2[0]);
+      const isNegative = v2[0] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (xParts.length === 0) {
+        if (coeff === "1") {
+          xParts.push(isNegative ? "-t" : "t");
+        } else {
+          xParts.push(isNegative ? `-${coeff}t` : `${coeff}t`);
+        }
+      } else {
+        if (isNegative) {
+          xParts.push(`- ${coeff}t`);
+        } else {
+          xParts.push(`+ ${coeff}t`);
+        }
+      }
+    }
+    if (xParts.length === 0) xParts.push("0");
+    
+    if (Math.abs(v1[1]) > 1e-10) {
+      const absCoeff = Math.abs(v1[1]);
+      const isNegative = v1[1] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (coeff === "1") {
+        yParts.push(isNegative ? "-s" : "s");
+      } else {
+        yParts.push(isNegative ? `-${coeff}s` : `${coeff}s`);
+      }
+    }
+    if (Math.abs(v2[1]) > 1e-10) {
+      const absCoeff = Math.abs(v2[1]);
+      const isNegative = v2[1] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (yParts.length === 0) {
+        if (coeff === "1") {
+          yParts.push(isNegative ? "-t" : "t");
+        } else {
+          yParts.push(isNegative ? `-${coeff}t` : `${coeff}t`);
+        }
+      } else {
+        if (isNegative) {
+          yParts.push(`- ${coeff}t`);
+        } else {
+          yParts.push(`+ ${coeff}t`);
+        }
+      }
+    }
+    if (yParts.length === 0) yParts.push("0");
+    
+    if (Math.abs(v1[2]) > 1e-10) {
+      const absCoeff = Math.abs(v1[2]);
+      const isNegative = v1[2] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (coeff === "1") {
+        zParts.push(isNegative ? "-s" : "s");
+      } else {
+        zParts.push(isNegative ? `-${coeff}s` : `${coeff}s`);
+      }
+    }
+    if (Math.abs(v2[2]) > 1e-10) {
+      const absCoeff = Math.abs(v2[2]);
+      const isNegative = v2[2] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (zParts.length === 0) {
+        if (coeff === "1") {
+          zParts.push(isNegative ? "-t" : "t");
+        } else {
+          zParts.push(isNegative ? `-${coeff}t` : `${coeff}t`);
+        }
+      } else {
+        if (isNegative) {
+          zParts.push(`- ${coeff}t`);
+        } else {
+          zParts.push(`+ ${coeff}t`);
+        }
+      }
+    }
+    if (zParts.length === 0) zParts.push("0");
+    
+    resultStr += `x = ${xParts.join(" ")}\n`;
+    resultStr += `y = ${yParts.join(" ")}\n`;
+    resultStr += `z = ${zParts.join(" ")}`;
+    
     setResult(resultStr);
   };
 
@@ -213,20 +488,28 @@ export default function VectorsPage() {
 
   const updateVectorValue = (vecIndex: number, index: number, value: string) => {
     if (!isValidNumericInput(value)) return;
-    const vectors = [vector1, vector2, vector3];
-    const setters = [setVector1, setVector2, setVector3];
+    const vectors = [vector1, vector2, vector3, vector4, vector5];
+    const setters = [setVector1, setVector2, setVector3, setVector4, setVector5];
     const newVec = [...vectors[vecIndex]];
     newVec[index] = value;
     setters[vecIndex](newVec);
-    setResult("");
+    // Don't clear result if an operation is selected - useEffect will update it
+    if (!selectedOperation) {
+      setResult("");
+    }
   };
 
   const updateCoeffValue = (index: number, value: string) => {
     if (!isValidNumericInput(value)) return;
     const newCoeffs = [...linearCombCoeffs];
+    // Ensure array is long enough
+    while (newCoeffs.length <= index) newCoeffs.push("");
     newCoeffs[index] = value;
     setLinearCombCoeffs(newCoeffs);
-    setResult("");
+    // Don't clear result if linear combination is selected - useEffect will update it
+    if (selectedOperation !== "linearComb") {
+      setResult("");
+    }
   };
 
   const updateProjectionVector = (index: number, value: string, isOnto: boolean) => {
@@ -236,174 +519,364 @@ export default function VectorsPage() {
     const newVec = [...vec];
     newVec[index] = value;
     setter(newVec);
-    setResult("");
+    if (selectedOperation !== "projection") {
+      setResult("");
+    }
   };
 
-  const VectorGraph2D = () => {
-    if (dimension !== 2) return null;
-    
-    const v1 = parseVector(vector1);
-    const v2 = parseVector(vector2);
-    const size = 400;
-    const center = size / 2;
-    const scale = 30; // pixels per unit
-    
-    const toScreen = (x: number, y: number) => ({
-      x: center + x * scale,
-      y: center - y * scale, // Flip y-axis
-    });
+  // Auto-update operations when vectors change
+  useEffect(() => {
+    if (selectedOperation === "norm" && numVectors >= 1) {
+      const vectors = [vector1, vector2, vector3, vector4, vector5];
+      let resultStr = "";
+      for (let i = 0; i < numVectors; i++) {
+        const v = parseVector(vectors[i]);
+        const norm = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
+        if (i > 0) resultStr += "\n";
+        resultStr += `||${formatVectorVar(i + 1)}|| = ${formatNumber(norm)}`;
+      }
+      setResult(resultStr);
+    }
+  }, [vector1, vector2, vector3, vector4, vector5, dimension, selectedOperation, numVectors]);
 
-    const maxAbs = Math.max(
-      Math.abs(v1[0]), Math.abs(v1[1]),
-      Math.abs(v2[0]), Math.abs(v2[1]),
-      5
-    );
-    const gridSize = Math.ceil(maxAbs) + 2;
+  useEffect(() => {
+    if (selectedOperation === "dot") {
+      if (numVectors !== 2) {
+        setResult("");
+        return;
+      }
+      const v1 = parseVector(vector1);
+      const v2 = parseVector(vector2);
+      if (v1.length === v2.length) {
+        const dot = v1.reduce((sum, val, i) => sum + val * v2[i], 0);
+        setResult(`${formatVector(v1, "v⃗₁")} · ${formatVector(v2, "v⃗₂")} = ${formatNumber(dot)}`);
+      }
+    }
+  }, [vector1, vector2, dimension, selectedOperation, numVectors]);
 
-    const drawArrow = (x1: number, y1: number, x2: number, y2: number, color: string, label: string) => {
-      const start = toScreen(x1, y1);
-      const end = toScreen(x2, y2);
-      const dx = end.x - start.x;
-      const dy = end.y - start.y;
-      const angle = Math.atan2(dy, dx);
-      const arrowLength = 10;
-      const arrowAngle = Math.PI / 6;
+  useEffect(() => {
+    if (selectedOperation === "cross") {
+      if (numVectors !== 2 || dimension !== 3) {
+        setResult("");
+        return;
+      }
+      const v1 = parseVector(vector1);
+      const v2 = parseVector(vector2);
+      const cross = [
+        v1[1] * v2[2] - v1[2] * v2[1],
+        v1[2] * v2[0] - v1[0] * v2[2],
+        v1[0] * v2[1] - v1[1] * v2[0],
+      ];
+      setResult(`${formatVector(v1, "v⃗₁")} × ${formatVector(v2, "v⃗₂")} = ${formatVector(cross, "v⃗₁ × v⃗₂")}`);
+    }
+  }, [vector1, vector2, dimension, selectedOperation, numVectors]);
 
-      return (
-        <g key={label}>
-          <line
-            x1={start.x}
-            y1={start.y}
-            x2={end.x}
-            y2={end.y}
-            stroke={color}
-            strokeWidth="3"
-            markerEnd={`url(#arrowhead-${color.replace('#', '')})`}
-          />
-          <text
-            x={end.x + 10}
-            y={end.y - 5}
-            fill={color}
-            fontSize="14"
-            fontWeight="bold"
-          >
-            {label}
-          </text>
-        </g>
-      );
-    };
+  useEffect(() => {
+    if (selectedOperation === "linearComb") {
+      if (numVectors < 2) {
+        setResult("");
+        return;
+      }
+      const vectors = [vector1, vector2, vector3, vector4, vector5];
+      const parsedVectors = vectors.slice(0, numVectors).map(v => parseVector(v));
+      
+      // Check all vectors have same dimension
+      const firstDim = parsedVectors[0].length;
+      if (!parsedVectors.every(v => v.length === firstDim)) {
+        setResult("Error: All vectors must have the same dimension");
+        return;
+      }
+      
+      // Calculate linear combination
+      const resultVec = new Array(firstDim).fill(0);
+      let resultStr = "";
+      
+      for (let i = 0; i < numVectors; i++) {
+        const coeff = parseFloat(linearCombCoeffs[i]) || 0;
+        const vec = parsedVectors[i];
+        
+        for (let j = 0; j < firstDim; j++) {
+          resultVec[j] += coeff * vec[j];
+        }
+        
+        if (i > 0 && coeff >= 0) resultStr += " + ";
+        else if (i > 0) resultStr += " ";
+        resultStr += `${formatNumber(coeff)}${formatVectorVar(i + 1)}`;
+      }
+      
+      resultStr += ` = ${formatVector(resultVec)}`;
+      setResult(resultStr);
+    }
+  }, [vector1, vector2, vector3, vector4, vector5, linearCombCoeffs, dimension, selectedOperation, numVectors]);
 
-    return (
-      <div className="mt-8 p-4 sm:p-6 bg-white/80 backdrop-blur-sm border-2 border-green-200 rounded-xl shadow-md">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <h3 className="text-base sm:text-lg font-bold text-gray-800">2D Visualization</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <svg width={size} height={size} className="border border-gray-200 rounded-lg bg-white min-w-[300px] max-w-full" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <marker
-              id="arrowhead-blue"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3, 0 6" fill="#3b82f6" />
-            </marker>
-            <marker
-              id="arrowhead-purple"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3, 0 6" fill="#a855f7" />
-            </marker>
-            <marker
-              id="arrowhead-green"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3, 0 6" fill="#10b981" />
-            </marker>
-          </defs>
-          
-          {/* Grid */}
-          {Array.from({ length: gridSize * 2 + 1 }, (_, i) => {
-            const val = i - gridSize;
-            const pos = toScreen(val, 0);
-            const pos2 = toScreen(0, val);
-            return (
-              <g key={`grid-${i}`}>
-                <line
-                  x1={pos.x}
-                  y1={0}
-                  x2={pos.x}
-                  y2={size}
-                  stroke="#e5e7eb"
-                  strokeWidth={val === 0 ? 2 : 1}
-                />
-                <line
-                  x1={0}
-                  y1={pos2.y}
-                  x2={size}
-                  y2={pos2.y}
-                  stroke="#e5e7eb"
-                  strokeWidth={val === 0 ? 2 : 1}
-                />
-                {val !== 0 && (
-                  <>
-                    <text x={pos.x} y={center + 15} textAnchor="middle" fontSize="10" fill="#6b7280">
-                      {val}
-                    </text>
-                    <text x={center - 15} y={pos2.y} textAnchor="middle" fontSize="10" fill="#6b7280">
-                      {val}
-                    </text>
-                  </>
-                )}
-              </g>
-            );
-          })}
+  useEffect(() => {
+    if (selectedOperation === "projection") {
+      if (numVectors !== 1) {
+        setResult("");
+        return;
+      }
+      const v = parseVector(vector1);
+      const u = parseVector(projectionOnto);
+      if (v.length === u.length && v.length > 0) {
+        const dotUV = v.reduce((sum, val, i) => sum + val * u[i], 0);
+        const dotUU = u.reduce((sum, val) => sum + val * val, 0);
+        if (Math.abs(dotUU) < 1e-10) {
+          setResult("Error: Cannot project onto zero vector");
+          return;
+        }
+        const scalar = dotUV / dotUU;
+        const projection = u.map((val) => scalar * val);
+        setResult(`projᵤ(v⃗) = ${formatVector(projection)}\n\nScalar: ${formatNumber(scalar)}`);
+      }
+    }
+  }, [vector1, projectionOnto, dimension, selectedOperation, numVectors]);
 
-          {/* Axes labels */}
-          <text x={size - 20} y={center - 10} fontSize="14" fontWeight="bold" fill="#374151">x</text>
-          <text x={center + 10} y={20} fontSize="14" fontWeight="bold" fill="#374151">y</text>
+  useEffect(() => {
+    if (selectedOperation === "line") {
+      if (numVectors !== 1 || (dimension !== 2 && dimension !== 3)) {
+        setResult("");
+        return;
+      }
+      const direction = parseVector(vector1);
+      
+      if (dimension === 2) {
+        if (Math.abs(direction[0]) < 1e-10 && Math.abs(direction[1]) < 1e-10) {
+          setResult("Error: Direction vector cannot be zero");
+          return;
+        }
+        let resultStr = `Vector form:\n`;
+        resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+        
+        resultStr += `Parametric form:\n`;
+        if (Math.abs(direction[0]) > 1e-10) {
+          const coeff = formatNumber(direction[0]);
+          if (coeff === "1") {
+            resultStr += `x = t\n`;
+          } else if (coeff === "-1") {
+            resultStr += `x = -t\n`;
+          } else {
+            resultStr += `x = ${coeff}t\n`;
+          }
+        }
+        if (Math.abs(direction[1]) > 1e-10) {
+          const coeff = formatNumber(direction[1]);
+          if (coeff === "1") {
+            resultStr += `y = t`;
+          } else if (coeff === "-1") {
+            resultStr += `y = -t`;
+          } else {
+            resultStr += `y = ${coeff}t`;
+          }
+        }
+        setResult(resultStr);
+      } else if (dimension === 3) {
+        if (direction.every((val) => Math.abs(val) < 1e-10)) {
+          setResult("Error: Direction vector cannot be zero");
+          return;
+        }
+        let resultStr = `Vector form:\n`;
+        resultStr += `r = t${formatVectorVertical(direction)}\n\n`;
+        
+        resultStr += `Parametric form:\n`;
+        const parts: string[] = [];
+        if (Math.abs(direction[0]) > 1e-10) {
+          const coeff = formatNumber(direction[0]);
+          if (coeff === "1") {
+            parts.push("x = t");
+          } else if (coeff === "-1") {
+            parts.push("x = -t");
+          } else {
+            parts.push(`x = ${coeff}t`);
+          }
+        }
+        if (Math.abs(direction[1]) > 1e-10) {
+          const coeff = formatNumber(direction[1]);
+          if (coeff === "1") {
+            parts.push("y = t");
+          } else if (coeff === "-1") {
+            parts.push("y = -t");
+          } else {
+            parts.push(`y = ${coeff}t`);
+          }
+        }
+        if (Math.abs(direction[2]) > 1e-10) {
+          const coeff = formatNumber(direction[2]);
+          if (coeff === "1") {
+            parts.push("z = t");
+          } else if (coeff === "-1") {
+            parts.push("z = -t");
+          } else {
+            parts.push(`z = ${coeff}t`);
+          }
+        }
+        resultStr += parts.join("\n");
+        setResult(resultStr);
+      }
+    }
+  }, [vector1, dimension, selectedOperation, numVectors]);
 
-          {/* Vectors */}
-          {drawArrow(0, 0, v1[0], v1[1], "#3b82f6", "v₁")}
-          {drawArrow(0, 0, v2[0], v2[1], "#a855f7", "v₂")}
+  useEffect(() => {
+    if (selectedOperation === "plane") {
+      if (numVectors !== 2 || dimension !== 3) {
+        setResult("");
+        return;
+      }
+      const v1 = parseVector(vector1);
+      const v2 = parseVector(vector2);
+      
+      // Calculate normal vector using cross product
+      const normal = [
+        v1[1] * v2[2] - v1[2] * v2[1],
+        v1[2] * v2[0] - v1[0] * v2[2],
+        v1[0] * v2[1] - v1[1] * v2[0],
+      ];
+      
+      const normMag = Math.sqrt(normal.reduce((sum, val) => sum + val * val, 0));
+      if (normMag < 1e-10) {
+        setResult("Error: Vectors are linearly dependent (parallel)");
+        return;
+      }
+      
+      // Since no point is given, plane goes through origin, so d = 0
+      const d = 0;
+      
+      let resultStr = `Vector form:\n`;
+      resultStr += `${formatPlaneVectorForm(v1, v2)}\n\n`;
+      
+      resultStr += `Scalar form:\n`;
+      resultStr += `${formatPlaneEquation([normal[0], normal[1], normal[2]], d)}\n\n`;
+      
+      resultStr += `Parametric form:\n`;
+      const xParts: string[] = [];
+      const yParts: string[] = [];
+      const zParts: string[] = [];
+      
+      if (Math.abs(v1[0]) > 1e-10) {
+        const absCoeff = Math.abs(v1[0]);
+        const isNegative = v1[0] < 0;
+        const coeff = formatNumber(absCoeff);
+        if (coeff === "1") {
+          xParts.push(isNegative ? "-s" : "s");
+        } else {
+          xParts.push(isNegative ? `-${coeff}s` : `${coeff}s`);
+        }
+      }
+      if (Math.abs(v2[0]) > 1e-10) {
+        const absCoeff = Math.abs(v2[0]);
+        const isNegative = v2[0] < 0;
+        const coeff = formatNumber(absCoeff);
+        if (xParts.length === 0) {
+          if (coeff === "1") {
+            xParts.push(isNegative ? "-t" : "t");
+          } else {
+            xParts.push(isNegative ? `-${coeff}t` : `${coeff}t`);
+          }
+        } else {
+          if (isNegative) {
+            xParts.push(`- ${coeff}t`);
+          } else {
+            xParts.push(`+ ${coeff}t`);
+          }
+        }
+      }
+      if (xParts.length === 0) xParts.push("0");
+      
+    if (Math.abs(v1[1]) > 1e-10) {
+      const absCoeff = Math.abs(v1[1]);
+      const isNegative = v1[1] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (coeff === "1") {
+        yParts.push(isNegative ? "-s" : "s");
+      } else {
+        yParts.push(isNegative ? `-${coeff}s` : `${coeff}s`);
+      }
+    }
+      if (Math.abs(v2[1]) > 1e-10) {
+        const absCoeff = Math.abs(v2[1]);
+        const isNegative = v2[1] < 0;
+        const coeff = formatNumber(absCoeff);
+        if (yParts.length === 0) {
+          if (coeff === "1") {
+            yParts.push(isNegative ? "-t" : "t");
+          } else {
+            yParts.push(isNegative ? `-${coeff}t` : `${coeff}t`);
+          }
+        } else {
+          if (isNegative) {
+            yParts.push(`- ${coeff}t`);
+          } else {
+            yParts.push(`+ ${coeff}t`);
+          }
+        }
+      }
+      if (yParts.length === 0) yParts.push("0");
+      
+    if (Math.abs(v1[2]) > 1e-10) {
+      const absCoeff = Math.abs(v1[2]);
+      const isNegative = v1[2] < 0;
+      const coeff = formatNumber(absCoeff);
+      if (coeff === "1") {
+        zParts.push(isNegative ? "-s" : "s");
+      } else {
+        zParts.push(isNegative ? `-${coeff}s` : `${coeff}s`);
+      }
+    }
+      if (Math.abs(v2[2]) > 1e-10) {
+        const absCoeff = Math.abs(v2[2]);
+        const isNegative = v2[2] < 0;
+        const coeff = formatNumber(absCoeff);
+        if (zParts.length === 0) {
+          if (coeff === "1") {
+            zParts.push(isNegative ? "-t" : "t");
+          } else {
+            zParts.push(isNegative ? `-${coeff}t` : `${coeff}t`);
+          }
+        } else {
+          if (isNegative) {
+            zParts.push(`- ${coeff}t`);
+          } else {
+            zParts.push(`+ ${coeff}t`);
+          }
+        }
+      }
+      if (zParts.length === 0) zParts.push("0");
+      
+      resultStr += `x = ${xParts.join(" ")}\n`;
+      resultStr += `y = ${yParts.join(" ")}\n`;
+      resultStr += `z = ${zParts.join(" ")}`;
+      
+      setResult(resultStr);
+    }
+  }, [vector1, vector2, dimension, selectedOperation, numVectors]);
 
-          {/* Linear combination if selected */}
-          {selectedOperation === "linearComb" && (() => {
-            const c1 = parseFloat(linearCombCoeffs[0]) || 0;
-            const c2 = parseFloat(linearCombCoeffs[1]) || 0;
-            const resultVec = [c1 * v1[0] + c2 * v2[0], c1 * v1[1] + c2 * v2[1]];
-            return drawArrow(0, 0, resultVec[0], resultVec[1], "#10b981", "result");
-          })()}
-
-          {/* Projection if selected */}
-          {selectedOperation === "projection" && (() => {
-            const v = parseVector(projectionVector);
-            const u = parseVector(projectionOnto);
-            const dotUV = v[0] * u[0] + v[1] * u[1];
-            const dotUU = u[0] * u[0] + u[1] * u[1];
-            if (Math.abs(dotUU) > 1e-10) {
-              const scalar = dotUV / dotUU;
-              const proj = [scalar * u[0], scalar * u[1]];
-              return drawArrow(0, 0, proj[0], proj[1], "#10b981", "proj");
-            }
-            return null;
-          })()}
-        </svg>
-        </div>
-      </div>
-    );
+  const handleVectorKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    vecIndex: number,
+    index: number,
+    vectorType: "v1" | "v2" | "v3" | "v4" | "v5" | "proj-v" | "proj-u"
+  ) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      
+      const maxIndex = dimension - 1;
+      let newIndex = index;
+      
+      if (e.key === "ArrowUp") {
+        newIndex = Math.max(0, index - 1);
+      } else if (e.key === "ArrowDown") {
+        newIndex = Math.min(maxIndex, index + 1);
+      }
+      
+      // Focus the next input within the same vector
+      const nextInput = document.getElementById(
+        `${vectorType}-${newIndex}`
+      ) as HTMLInputElement;
+      
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+    }
   };
 
   return (
@@ -424,29 +897,256 @@ export default function VectorsPage() {
           <p className="text-gray-600 text-base sm:text-lg">Vector operations, projections, and geometric equations</p>
         </div>
 
-        <div className="mb-8 p-4 bg-green-50/50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-            <span className="text-green-600 font-semibold text-base sm:text-lg whitespace-nowrap">Dimension:</span>
-            <button
-              onClick={() => updateDimension(2)}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
-                dimension === 2
-                  ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
-                  : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
-              }`}
-            >
-              2D
-            </button>
-            <button
-              onClick={() => updateDimension(3)}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
-                dimension === 3
-                  ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
-                  : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
-              }`}
-            >
-              3D
-            </button>
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="p-4 bg-green-50/50 border border-green-200 rounded-lg w-full sm:w-auto">
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <span className="text-green-600 font-semibold text-base sm:text-lg whitespace-nowrap">Dimension:</span>
+                <button
+                  onClick={() => updateDimension(2)}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+                    dimension === 2
+                      ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
+                      : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                  }`}
+                >
+                  2D
+                </button>
+                <button
+                  onClick={() => updateDimension(3)}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+                    dimension === 3
+                      ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
+                      : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                  }`}
+                >
+                  3D
+                </button>
+                <button
+                  onClick={() => updateDimension(4)}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+                    dimension === 4
+                      ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
+                      : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                  }`}
+                >
+                  4D
+                </button>
+                <button
+                  onClick={() => updateDimension(5)}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+                    dimension === 5
+                      ? "bg-green-500 text-white ring-2 ring-offset-2 ring-offset-white ring-green-400 shadow-md"
+                      : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                  }`}
+                >
+                  5D
+                </button>
+              </div>
+            </div>
+            <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-lg w-full sm:w-auto">
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <span className="text-blue-600 font-semibold text-base sm:text-lg whitespace-nowrap">Vectors:</span>
+                <button
+                  onClick={removeVector}
+                  disabled={numVectors <= 1}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+                    numVectors <= 1
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200"
+                  }`}
+                >
+                  −
+                </button>
+                <span className="text-blue-600 font-semibold text-base sm:text-lg">{numVectors}</span>
+                <button
+                  onClick={addVector}
+                  disabled={numVectors >= 5}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+                    numVectors >= 5
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200"
+                  }`}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-start gap-1 justify-center">
+          {numVectors >= 1 && (
+            <div className="flex items-start gap-2">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <h3 className="text-lg font-bold text-gray-800">{selectedOperation === "projection" ? "Vector v⃗" : `Vector 1 (v⃗₁)`}</h3>
+                </div>
+                <div className="border-2 border-blue-300 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-md inline-block">
+                  <div className="flex items-stretch gap-1">
+                    <span className="text-blue-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">[</span>
+                    <div className="flex flex-col gap-0">
+                      {vector1.slice(0, dimension).map((val, i) => (
+                        <input
+                          key={`v1-${i}`}
+                          id={`v1-${i}`}
+                          type="text"
+                          value={val}
+                          onChange={(e) => updateVectorValue(0, i, e.target.value)}
+                          onKeyDown={(e) => handleVectorKeyDown(e, 0, i, "v1")}
+                          className="w-16 sm:w-20 px-2 py-1 text-center border-2 border-blue-200 rounded bg-white text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-sm sm:text-base"
+                          placeholder="0"
+                        />
+                      ))}
+                    </div>
+                    <span className="text-blue-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">]</span>
+                  </div>
+                </div>
+              </div>
+              {selectedOperation === "projection" && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
+                    <h3 className="text-lg font-bold text-gray-800">Vector u⃗ (onto)</h3>
+                  </div>
+                  <div className="border-2 border-cyan-300 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-md inline-block">
+                    <div className="flex items-stretch gap-1">
+                      <span className="text-cyan-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">[</span>
+                      <div className="flex flex-col gap-0">
+                        {projectionOnto.slice(0, dimension).map((val, i) => (
+                          <input
+                            key={`proj-u-${i}`}
+                            id={`proj-u-${i}`}
+                            type="text"
+                            value={val}
+                            onChange={(e) => updateProjectionVector(i, e.target.value, true)}
+                            onKeyDown={(e) => handleVectorKeyDown(e, 0, i, "proj-u")}
+                            className="w-16 sm:w-20 px-2 py-1 text-center border-2 border-cyan-200 rounded bg-white text-gray-700 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200 font-medium text-sm sm:text-base"
+                            placeholder="0"
+                          />
+                        ))}
+                      </div>
+                      <span className="text-cyan-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">]</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {numVectors >= 2 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                <h3 className="text-lg font-bold text-gray-800">Vector 2 (v⃗₂)</h3>
+              </div>
+              <div className="border-2 border-purple-300 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-md inline-block">
+                <div className="flex items-stretch gap-1">
+                  <span className="text-purple-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">[</span>
+                  <div className="flex flex-col gap-0">
+                    {vector2.slice(0, dimension).map((val, i) => (
+                      <input
+                        key={`v2-${i}`}
+                        id={`v2-${i}`}
+                        type="text"
+                        value={val}
+                        onChange={(e) => updateVectorValue(1, i, e.target.value)}
+                        onKeyDown={(e) => handleVectorKeyDown(e, 1, i, "v2")}
+                        className="w-16 sm:w-20 px-2 py-1 text-center border-2 border-purple-200 rounded bg-white text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 font-medium text-sm sm:text-base"
+                        placeholder="0"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-purple-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">]</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {numVectors >= 3 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                <h3 className="text-lg font-bold text-gray-800">Vector 3 (v⃗₃)</h3>
+              </div>
+              <div className="border-2 border-pink-300 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-md inline-block">
+                <div className="flex items-stretch gap-1">
+                  <span className="text-pink-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">[</span>
+                  <div className="flex flex-col gap-0">
+                    {vector3.slice(0, dimension).map((val, i) => (
+                      <input
+                        key={`v3-${i}`}
+                        id={`v3-${i}`}
+                        type="text"
+                        value={val}
+                        onChange={(e) => updateVectorValue(2, i, e.target.value)}
+                        onKeyDown={(e) => handleVectorKeyDown(e, 2, i, "v3")}
+                        className="w-16 sm:w-20 px-2 py-1 text-center border-2 border-pink-200 rounded bg-white text-gray-700 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 font-medium text-sm sm:text-base"
+                        placeholder="0"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-pink-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">]</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {numVectors >= 4 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                <h3 className="text-lg font-bold text-gray-800">Vector 4 (v⃗₄)</h3>
+              </div>
+              <div className="border-2 border-orange-300 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-md inline-block">
+                <div className="flex items-stretch gap-1">
+                  <span className="text-orange-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">[</span>
+                  <div className="flex flex-col gap-0">
+                    {vector4.slice(0, dimension).map((val, i) => (
+                      <input
+                        key={`v4-${i}`}
+                        id={`v4-${i}`}
+                        type="text"
+                        value={val}
+                        onChange={(e) => updateVectorValue(3, i, e.target.value)}
+                        onKeyDown={(e) => handleVectorKeyDown(e, 3, i, "v4")}
+                        className="w-16 sm:w-20 px-2 py-1 text-center border-2 border-orange-200 rounded bg-white text-gray-700 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 font-medium text-sm sm:text-base"
+                        placeholder="0"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-orange-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">]</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {numVectors >= 5 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <h3 className="text-lg font-bold text-gray-800">Vector 5 (v⃗₅)</h3>
+              </div>
+              <div className="border-2 border-red-300 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-md inline-block">
+                <div className="flex items-stretch gap-1">
+                  <span className="text-red-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">[</span>
+                  <div className="flex flex-col gap-0">
+                    {vector5.slice(0, dimension).map((val, i) => (
+                      <input
+                        key={`v5-${i}`}
+                        id={`v5-${i}`}
+                        type="text"
+                        value={val}
+                        onChange={(e) => updateVectorValue(4, i, e.target.value)}
+                        onKeyDown={(e) => handleVectorKeyDown(e, 4, i, "v5")}
+                        className="w-16 sm:w-20 px-2 py-1 text-center border-2 border-red-200 rounded bg-white text-gray-700 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 font-medium text-sm sm:text-base"
+                        placeholder="0"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-red-600 font-bold text-2xl sm:text-3xl leading-none flex items-center">]</span>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
 
@@ -466,186 +1166,75 @@ export default function VectorsPage() {
             </button>
             <button
               onClick={calculateDotProduct}
-              className={getButtonClass("dot", "blue")}
+              disabled={numVectors !== 2}
+              className={`${getButtonClass("dot", "blue")} ${numVectors !== 2 ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={numVectors !== 2 ? "Requires exactly 2 vectors" : ""}
             >
               Dot Product
             </button>
             <button
               onClick={calculateCrossProduct}
-              disabled={dimension !== 3}
-              className={`${getButtonClass("cross", "blue")} ${dimension !== 3 ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={dimension !== 3 || numVectors !== 2}
+              className={`${getButtonClass("cross", "blue")} ${dimension !== 3 || numVectors !== 2 ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={dimension !== 3 ? "Requires 3D" : numVectors !== 2 ? "Requires exactly 2 vectors" : ""}
             >
               Cross Product
             </button>
             <button
               onClick={calculateLinearCombination}
-              className={getButtonClass("linearComb", "green")}
+              disabled={numVectors < 2}
+              className={`${getButtonClass("linearComb", "green")} ${numVectors < 2 ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={numVectors < 2 ? "Requires 2 vectors" : ""}
             >
               Linear Combination
             </button>
             <button
               onClick={calculateProjection}
-              className={getButtonClass("projection", "green")}
+              disabled={numVectors !== 1}
+              className={`${getButtonClass("projection", "green")} ${numVectors !== 1 ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={numVectors !== 1 ? "Requires exactly 1 vector" : ""}
             >
               Projection
             </button>
             <button
               onClick={calculateLineEquation}
-              className={getButtonClass("line", "purple")}
+              disabled={(dimension !== 2 && dimension !== 3) || numVectors !== 1}
+              className={`${getButtonClass("line", "purple")} ${(dimension !== 2 && dimension !== 3) || numVectors !== 1 ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={(dimension !== 2 && dimension !== 3) ? "Line equation only works for 2D and 3D" : numVectors !== 1 ? "Requires exactly 1 vector" : ""}
             >
               Line Equation
             </button>
             <button
               onClick={calculatePlaneEquation}
-              disabled={dimension !== 3}
-              className={`${getButtonClass("plane", "purple")} ${dimension !== 3 ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={dimension !== 3 || numVectors !== 2}
+              className={`${getButtonClass("plane", "purple")} ${dimension !== 3 || numVectors !== 2 ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={dimension !== 3 ? "Requires 3D" : numVectors !== 2 ? "Requires exactly 2 vectors" : ""}
             >
               Plane Equation
             </button>
           </div>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-              <h3 className="text-lg font-bold text-gray-800">Vector 1 (v₁)</h3>
-            </div>
-            <div className="border-2 border-blue-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
-              <div className="flex flex-wrap gap-2">
-                {vector1.slice(0, dimension).map((val, i) => (
-                  <input
-                    key={`v1-${i}`}
-                    type="text"
-                    value={val}
-                    onChange={(e) => updateVectorValue(0, i, e.target.value)}
-                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-blue-200 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-medium text-sm sm:text-base"
-                    placeholder="0"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-              <h3 className="text-lg font-bold text-gray-800">Vector 2 (v₂)</h3>
-            </div>
-            <div className="border-2 border-purple-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
-              <div className="flex flex-wrap gap-2">
-                {vector2.slice(0, dimension).map((val, i) => (
-                  <input
-                    key={`v2-${i}`}
-                    type="text"
-                    value={val}
-                    onChange={(e) => updateVectorValue(1, i, e.target.value)}
-                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-purple-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 font-medium text-sm sm:text-base"
-                    placeholder="0"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {dimension === 3 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full bg-pink-500"></div>
-                <h3 className="text-lg font-bold text-gray-800">Vector 3 (v₃)</h3>
-              </div>
-              <div className="border-2 border-pink-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
-                <div className="flex flex-wrap gap-2">
-                  {vector3.slice(0, dimension).map((val, i) => (
-                    <input
-                      key={`v3-${i}`}
-                      type="text"
-                      value={val}
-                      onChange={(e) => updateVectorValue(2, i, e.target.value)}
-                      className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-pink-200 rounded-lg bg-white text-gray-700 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 font-medium text-sm sm:text-base"
-                      placeholder="0"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         {selectedOperation === "linearComb" && (
           <div className="mb-8 p-4 bg-green-50/50 border border-green-200 rounded-lg">
             <h3 className="text-lg font-bold text-gray-800 mb-3">Linear Combination Coefficients</h3>
             <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-700">c₁:</span>
-                <input
-                  type="text"
-                  value={linearCombCoeffs[0]}
-                  onChange={(e) => updateCoeffValue(0, e.target.value)}
-                  className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium text-sm sm:text-base"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-700">c₂:</span>
-                <input
-                  type="text"
-                  value={linearCombCoeffs[1]}
-                  onChange={(e) => updateCoeffValue(1, e.target.value)}
-                  className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium text-sm sm:text-base"
-                />
-              </div>
+              {Array.from({ length: numVectors }, (_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-gray-700">c{String.fromCharCode(8320 + i + 1)}:</span>
+                  <input
+                    type="text"
+                    value={linearCombCoeffs[i] ?? ""}
+                    onChange={(e) => updateCoeffValue(i, e.target.value)}
+                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-green-200 rounded-lg bg-white text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 font-medium text-sm sm:text-base"
+                    placeholder="0"
+                  />
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {selectedOperation === "projection" && (
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full bg-teal-500"></div>
-                <h3 className="text-lg font-bold text-gray-800">Vector v</h3>
-              </div>
-              <div className="border-2 border-teal-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
-                <div className="flex flex-wrap gap-2">
-                  {projectionVector.slice(0, dimension).map((val, i) => (
-                    <input
-                      key={`proj-v-${i}`}
-                      type="text"
-                      value={val}
-                      onChange={(e) => updateProjectionVector(i, e.target.value, false)}
-                      className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-teal-200 rounded-lg bg-white text-gray-700 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200 font-medium text-sm sm:text-base"
-                      placeholder="0"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
-                <h3 className="text-lg font-bold text-gray-800">Vector u (onto)</h3>
-              </div>
-              <div className="border-2 border-cyan-300 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
-                <div className="flex flex-wrap gap-2">
-                  {projectionOnto.slice(0, dimension).map((val, i) => (
-                    <input
-                      key={`proj-u-${i}`}
-                      type="text"
-                      value={val}
-                      onChange={(e) => updateProjectionVector(i, e.target.value, true)}
-                      className="w-16 sm:w-20 px-1 sm:px-2 py-1 text-center border-2 border-cyan-200 rounded-lg bg-white text-gray-700 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200 font-medium text-sm sm:text-base"
-                      placeholder="0"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {dimension === 2 && (selectedOperation === "dot" || selectedOperation === "linearComb" || selectedOperation === "projection" || selectedOperation === "line") && (
-          <VectorGraph2D />
-        )}
 
         {result && (
           <div className="mt-8 p-6 bg-gradient-to-br from-green-50/70 via-emerald-50/50 to-teal-50/60 backdrop-blur-sm border-2 border-green-200 rounded-xl shadow-md overflow-x-auto">
