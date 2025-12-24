@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const tools = [
   {
@@ -47,17 +48,27 @@ const tools = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen p-8 md:p-16 bg-gradient-to-br from-pink-50/60 via-blue-50/60 to-purple-50/60">
+    <main className="min-h-screen px-4 pt-2 pb-8 md:px-10 md:pt-4 md:pb-12 bg-gradient-to-br from-pink-50/60 via-blue-50/60 to-purple-50/60">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl md:text-6xl font-bold mb-4">
-          <span className="text-gray-800">Course </span>
-          <span className="text-blue-600">Tools</span>
-        </h1>
-        <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-12">
-          A collection of helpful calculators and utilities for your academic courses
-        </p>
+        <div className="flex flex-col items-start gap-2 mb-4 md:mb-6">
+          <Image
+            src="/logo.png"
+            alt="JKCT Logo"
+            width={240}
+            height={80}
+            sizes="(max-width: 640px) 160px, (max-width: 768px) 208px, 240px"
+            className="w-40 sm:w-52 md:w-60 h-auto drop-shadow-sm"
+            priority
+          />
+          <p className="text-base sm:text-lg md:text-xl text-gray-700">
+            Smart, beautifully designed tools for{" "}
+            <span className="font-semibold text-blue-400">math</span>,{" "}
+            <span className="font-semibold text-purple-400">computer science</span>, and{" "}
+            <span className="font-semibold text-pink-400">science</span> courses.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {tools.map((tool) => {
             const colorClasses = {
               blue: "border-blue-200 hover:border-blue-300 bg-blue-50/30",
@@ -91,7 +102,7 @@ export default function Home() {
           })}
         </div>
 
-        <div className="mt-12 p-6 bg-blue-50/50 rounded-lg border border-blue-200">
+        <div className="mt-8 md:mt-10 p-6 bg-blue-50/50 rounded-lg border border-blue-200">
           <h3 className="text-lg font-semibold mb-2 text-gray-800">About</h3>
           <p className="text-gray-600">
             This is a collection of tools designed to help with time-consuming tasks in various
