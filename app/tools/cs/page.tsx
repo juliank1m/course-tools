@@ -615,15 +615,10 @@ export default function CSPage() {
               <span className="text-red-500 font-bold">⚠️</span>
               <p className="text-sm text-red-700">{error}</p>
             </div>
-            {error.includes("API key") && (
-              <div className="text-xs text-red-600 mt-2 space-y-1">
-                <p>
-                  Add your OpenAI API key to <code className="bg-red-100 px-1 rounded">.env.local</code> as <code className="bg-red-100 px-1 rounded">OPENAI_API_KEY=your-key-here</code>
-                </p>
-                <p className="text-green-700">
-                  🔒 <strong>Security:</strong> Your API key is stored server-side only and never exposed to the browser. The <code className="bg-green-100 px-1 rounded">.env.local</code> file is already in <code className="bg-green-100 px-1 rounded">.gitignore</code> to prevent accidental commits.
-                </p>
-              </div>
+            {error.includes("unavailable") && (
+              <p className="text-xs text-red-600 mt-2">
+                You can still use pattern matching mode (toggle AI Analysis OFF) for free analysis.
+              </p>
             )}
           </div>
         )}

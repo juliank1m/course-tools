@@ -18,23 +18,25 @@ export async function POST(request: NextRequest) {
     // Check API key BEFORE creating client (prevents module-load-time errors)
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
+      console.error("OPENAI_API_KEY is not configured");
       return NextResponse.json(
         {
-          error: "OpenAI API key not configured",
-          details: "Please add OPENAI_API_KEY to your .env.local file and restart the server",
+          error: "AI analysis is currently unavailable",
+          message: "Please try using pattern matching mode instead.",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 
     // Validate API key format
     if (!apiKey.startsWith("sk-")) {
+      console.error("Invalid OPENAI_API_KEY format");
       return NextResponse.json(
         {
-          error: "Invalid API key format",
-          details: "OpenAI API keys should start with 'sk-'",
+          error: "AI analysis is currently unavailable",
+          message: "Please try using pattern matching mode instead.",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 
