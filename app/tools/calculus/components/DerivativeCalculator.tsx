@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import MathInput from "./MathInput";
 
 type DerivativeResult = {
   derivative: string;
@@ -72,12 +73,10 @@ export default function DerivativeCalculator() {
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Function f(x)
             </label>
-            <input
-              type="text"
+            <MathInput
               value={expression}
-              onChange={(e) => setExpression(e.target.value)}
-              placeholder="e.g. x^3 - 4x + 1, sin(x), e^(2x)"
-              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-800 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              onChange={setExpression}
+              placeholder="Enter function, e.g. x^3 - 4x + 1"
             />
             <p className="mt-1 text-xs text-gray-500">
               Use <code className="font-mono">x</code> as the variable. You can include functions like{" "}
@@ -95,7 +94,7 @@ export default function DerivativeCalculator() {
               type="text"
               value={point}
               onChange={(e) => setPoint(e.target.value)}
-              placeholder="e.g. 0, 1.5, pi/2"
+              placeholder="Optional: x value to evaluate at"
               className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-800 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             <p className="mt-1 text-xs text-gray-500">

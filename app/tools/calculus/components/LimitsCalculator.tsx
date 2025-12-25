@@ -1,8 +1,8 @@
 "use client";
 
-import { MathExpression, EvalFunction } from "mathjs";
 import { useState } from "react";
 import { parse, compile } from "mathjs";
+import MathInput from "./MathInput";
 
 export default function LimitsCalculator() {
   const [expression, setExpression] = useState("sin(x) / x");
@@ -149,12 +149,10 @@ export default function LimitsCalculator() {
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Function f(x)
             </label>
-            <input
-              type="text"
+            <MathInput
               value={expression}
-              onChange={(e) => setExpression(e.target.value)}
-              placeholder="e.g. sin(x) / x, (x^2 - 1) / (x - 1), 1 / x"
-              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-800 font-mono text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+              onChange={setExpression}
+              placeholder="Enter function"
             />
             <p className="mt-1 text-xs text-gray-500">
               Use <code className="font-mono">x</code> as the variable. For infinity, use{" "}
@@ -171,7 +169,7 @@ export default function LimitsCalculator() {
                 type="text"
                 value={approachValue}
                 onChange={(e) => setApproachValue(e.target.value)}
-                placeholder="e.g. 0, inf, -inf, 1"
+                placeholder="Value to approach (use inf for ∞)"
                 className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-800 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
               />
             </div>

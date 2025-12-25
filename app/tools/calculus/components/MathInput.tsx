@@ -1,0 +1,287 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
+import type { MathField } from "react-mathquill";
+
+// Dynamically import MathQuill only on client side to avoid SSR issues
+const EditableMathField = dynamic(
+  () => import("react-mathquill").then((mod) => {
+    // Add styles when component loads
+    if (typeof window !== "undefined") {
+      mod.addStyles();
+    }
+    return mod.EditableMathField;
+  }),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-800 min-h-[2.5rem] flex items-center">
+        <span className="text-gray-400 text-sm">Loading math editor...</span>
+      </div>
+    )
+  }
+);
+
+interface MathInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+// Convert LaTeX to mathjs-compatible format
+// This function converts MathQuill's LaTeX output to a format that mathjs can parse
+function latexToMathJS(latex: string): string {
+  if (!latex) return "";
+  
+  let result = latex;
+
+  // Replace \left( and \right) first
+  result = result.replace(/\\left\(/g, "(");
+  result = result.replace(/\\right\)/g, ")");
+
+  // Handle fractions: \frac{numerator}{denominator}
+  // Use iterative approach to handle nested fractions
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 10) {
+    const prev = result;
+    result = result.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, (_, num, den) => {
+      // Convert numerator and denominator recursively, but simplify
+      const numClean = num.replace(/\{|\}/g, "");
+      const denClean = den.replace(/\{|\}/g, "");
+      return `(${numClean})/(${denClean})`;
+    });
+    changed = prev !== result;
+    iterations++;
+  }
+
+  // Handle sqrt: \sqrt{expr} or \sqrt[n]{expr}
+  result = result.replace(/\\sqrt\[(\d+)\]\s*\{([^{}]*)\}/g, "nthRoot($2, $1)");
+  result = result.replace(/\\sqrt\s*\{([^{}]*)\}/g, "sqrt($1)");
+
+  // Handle function commands: \sin(x), \cos(x), etc.
+  result = result.replace(/\\sin\s*\(/g, "sin(");
+  result = result.replace(/\\cos\s*\(/g, "cos(");
+  result = result.replace(/\\tan\s*\(/g, "tan(");
+  result = result.replace(/\\csc\s*\(/g, "csc(");
+  result = result.replace(/\\sec\s*\(/g, "sec(");
+  result = result.replace(/\\cot\s*\(/g, "cot(");
+  result = result.replace(/\\arcsin\s*\(/g, "arcsin(");
+  result = result.replace(/\\arccos\s*\(/g, "arccos(");
+  result = result.replace(/\\arctan\s*\(/g, "arctan(");
+  result = result.replace(/\\sinh\s*\(/g, "sinh(");
+  result = result.replace(/\\cosh\s*\(/g, "cosh(");
+  result = result.replace(/\\tanh\s*\(/g, "tanh(");
+  result = result.replace(/\\ln\s*\(/g, "ln(");
+  result = result.replace(/\\log\s*\(/g, "log(");
+  result = result.replace(/\\exp\s*\(/g, "exp(");
+  result = result.replace(/\\abs\s*\{([^{}]*)\}/g, "abs($1)");
+  result = result.replace(/\\floor\s*\{([^{}]*)\}/g, "floor($1)");
+  result = result.replace(/\\ceil\s*\{([^{}]*)\}/g, "ceil($1)");
+
+  // Replace Greek letters and symbols
+  result = result.replace(/\\pi\b/g, "pi");
+  result = result.replace(/\\e\b(?!x)/g, "e"); // \e but not \exp
+  result = result.replace(/\\inf\b/g, "inf");
+  result = result.replace(/\\infty\b/g, "inf");
+  result = result.replace(/\\theta\b/g, "theta");
+  result = result.replace(/\\alpha\b/g, "alpha");
+  result = result.replace(/\\beta\b/g, "beta");
+  result = result.replace(/\\gamma\b/g, "gamma");
+
+  // Handle superscripts: x^{2} or x^2
+  result = result.replace(/\^\{([^{}]*)\}/g, "^$1");
+  result = result.replace(/\^([a-zA-Z0-9+\-*/().])/g, "^$1");
+
+  // Handle subscripts: x_{1} or x_1
+  result = result.replace(/_\{([^{}]*)\}/g, "_$1");
+
+  // Handle multiplication
+  result = result.replace(/\\cdot/g, "*");
+
+  // Remove remaining braces
+  result = result.replace(/\{([^{}]*)\}/g, "$1");
+
+  // Preserve spaces but normalize multiple spaces to single space
+  // Don't trim - allow leading/trailing spaces if user typed them
+  result = result.replace(/\s+/g, " ");
+
+  // Don't add implicit multiplication here - let mathjs handle it
+  // Mathjs can parse expressions like "2x" and "sin(x)" without explicit *
+  // Only add * in cases where it's absolutely necessary and safe
+  // Add * only between digit and variable (not function): 2x -> 2*x, but 2sin stays as is
+  result = result.replace(/(\d)([a-z]+)\s*\(/g, "$1$2("); // Protect function names like 2sin(
+  result = result.replace(/(\d)([a-zA-Z])(?!\w*\()/g, "$1*$2"); // Only add * for single letters after digits
+
+  return result;
+}
+
+// Convert mathjs format to LaTeX for MathQuill (simplified - just pass through if already LaTeX-like)
+function mathJSToLaTeX(mathjs: string): string {
+  if (!mathjs) return "";
+  
+  let result = mathjs;
+
+  // Handle exponents first: x^2 -> x^{2}, x^(2+3) -> x^{2+3}
+  // This needs to be done before other conversions
+  result = result.replace(/\^\(([^)]+)\)/g, "^{$1}"); // x^(expr) -> x^{expr}
+  result = result.replace(/\^([a-zA-Z0-9]+)/g, "^{$1}"); // x^2 -> x^{2}, x^n -> x^{n}
+
+  // Convert function names to LaTeX commands (simple cases)
+  result = result.replace(/\bsin\s*\(/g, "\\sin\\left(");
+  result = result.replace(/\bcos\s*\(/g, "\\cos\\left(");
+  result = result.replace(/\btan\s*\(/g, "\\tan\\left(");
+  result = result.replace(/\bcsc\s*\(/g, "\\csc\\left(");
+  result = result.replace(/\bsec\s*\(/g, "\\sec\\left(");
+  result = result.replace(/\bcot\s*\(/g, "\\cot\\left(");
+  result = result.replace(/\barcsin\s*\(/g, "\\arcsin\\left(");
+  result = result.replace(/\barccos\s*\(/g, "\\arccos\\left(");
+  result = result.replace(/\barctan\s*\(/g, "\\arctan\\left(");
+  result = result.replace(/\bsinh\s*\(/g, "\\sinh\\left(");
+  result = result.replace(/\bcosh\s*\(/g, "\\cosh\\left(");
+  result = result.replace(/\btanh\s*\(/g, "\\tanh\\left(");
+  result = result.replace(/\bln\s*\(/g, "\\ln\\left(");
+  result = result.replace(/\blog\s*\(/g, "\\log\\left(");
+  result = result.replace(/\bexp\s*\(/g, "\\exp\\left(");
+  result = result.replace(/\bsqrt\s*\(/g, "\\sqrt{");
+  result = result.replace(/\babs\s*\(/g, "\\abs{");
+
+  // Convert symbols
+  result = result.replace(/\bpi\b/g, "\\pi");
+  result = result.replace(/\binf\b/g, "\\infty");
+  result = result.replace(/\btheta\b/g, "\\theta");
+  result = result.replace(/\balpha\b/g, "\\alpha");
+  result = result.replace(/\bbeta\b/g, "\\beta");
+  result = result.replace(/\bgamma\b/g, "\\gamma");
+
+  // Fix parentheses - close opened left(
+  result = result.replace(/\\left\(([^)]*)\)/g, "\\left($1\\right)");
+  // Close unclosed sqrt and abs
+  result = result.replace(/\\sqrt\{([^}]*)([^}])/g, "\\sqrt{$1$2}");
+  result = result.replace(/\\abs\{([^}]*)([^}])/g, "\\abs{$1$2}");
+
+  return result;
+}
+
+export default function MathInput({ value, onChange, placeholder, className = "" }: MathInputProps) {
+  const mathFieldRef = useRef<MathField | null>(null);
+  const [internalLatex, setInternalLatex] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Initialize internalLatex from value prop on mount
+  useEffect(() => {
+    if (value && !internalLatex && !isMounted) {
+      const convertedLatex = mathJSToLaTeX(value);
+      setInternalLatex(convertedLatex);
+    }
+  }, [value, internalLatex, isMounted]);
+
+  // Convert value prop to LaTeX when it changes externally (after mount)
+  // Only update if the value prop is actually different from what we have
+  useEffect(() => {
+    if (isMounted && mathFieldRef.current) {
+      const currentLatex = mathFieldRef.current.latex();
+      const currentMathJS = latexToMathJS(currentLatex);
+      
+      // Only update if the value prop is different from what MathQuill currently has
+      // This prevents overwriting user input while they're typing
+      if (value !== currentMathJS) {
+        if (value === "") {
+          // Clear the field
+          if (currentLatex !== "") {
+            mathFieldRef.current.latex("");
+            setInternalLatex("");
+          }
+        } else {
+          // Update with new value
+          const convertedLatex = mathJSToLaTeX(value);
+          if (currentLatex !== convertedLatex) {
+            mathFieldRef.current.latex(convertedLatex);
+            setInternalLatex(convertedLatex);
+          }
+        }
+      }
+    }
+  }, [value, isMounted]);
+
+  const handleChange = (mathField: MathField) => {
+    const latex = mathField.latex();
+    setInternalLatex(latex);
+    
+    // Convert LaTeX to mathjs format
+    let mathjsValue = latexToMathJS(latex);
+    
+    // If conversion results in empty or problematic string, try text() method
+    if (!mathjsValue || mathjsValue.trim() === "") {
+      const plainText = mathField.text();
+      mathjsValue = plainText || "";
+    }
+    
+    // Always call onChange to keep parent in sync
+    // Empty string is valid (user cleared the field)
+    onChange(mathjsValue);
+  };
+
+  return (
+    <div className={`relative ${className}`}>
+      <div className="relative">
+        <EditableMathField
+          latex={internalLatex}
+          onChange={handleChange}
+          mathquillDidMount={(mathField: MathField) => {
+            mathFieldRef.current = mathField;
+            setIsMounted(true);
+            
+            // Initialize with value if provided
+            const initLatex = value ? mathJSToLaTeX(value) : (internalLatex || "");
+            if (initLatex) {
+              // Use setTimeout to ensure MathQuill is fully initialized
+              setTimeout(() => {
+                mathField.latex(initLatex);
+                setInternalLatex(initLatex);
+              }, 0);
+            }
+            
+            // Get the underlying DOM element
+            const el = (mathField as any).el();
+            if (el) {
+              // Add keydown listener to handle space before MathQuill processes it
+              // Let MathQuill handle ^ natively for proper exponent support
+              const handleKeyDown = (e: KeyboardEvent) => {
+                // Handle space key - insert as text and prevent default tab behavior
+                if (e.key === " " && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  mathField.typedText(" ");
+                  return false;
+                }
+              };
+              
+              el.addEventListener("keydown", handleKeyDown, true); // Use capture phase
+              
+              // Clean up listener on unmount
+              return () => {
+                el.removeEventListener("keydown", handleKeyDown, true);
+              };
+            }
+          }}
+          config={{
+            autoCommands: "pi theta sqrt sum prod alpha beta gamma delta epsilon lambda mu sigma phi",
+            autoOperatorNames: "sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh ln log exp abs floor ceil",
+            spaceBehavesLikeTab: false,
+            leftRightIntoCmdGoes: "up",
+            restrictMismatchedBrackets: false,
+            sumStartsWithNEquals: true,
+            supSubsRequireOperand: true, // Require operand for proper exponent handling
+            charsThatBreakOutOfSupSub: "+-=<>",
+            autoSubscriptNumerals: false,
+            maxDepth: 10,
+          }}
+          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 min-h-[2.5rem]"
+        />
+      </div>
+    </div>
+  );
+}
