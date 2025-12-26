@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { compile, derivative } from "mathjs";
 import MathInput from "./MathInput";
+import VirtualMathKeyboard from "./VirtualMathKeyboard";
 
 export default function GraphingCalculator() {
   const [expression, setExpression] = useState("sin(x)");
@@ -13,9 +14,16 @@ export default function GraphingCalculator() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showFunctionMenu, setShowFunctionMenu] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const functionPointsRef = useRef<{ x: number; y: number; canvasX: number; canvasY: number }[]>([]);
   const importantPointsRef = useRef<{ x: number; y: number; type: string }[]>([]);
+  const mathInputContainerRef = useRef<HTMLDivElement>(null);
+  const insertTextRef = useRef<((text: string) => void) | null>(null);
+  const focusMathInputRef = useRef<(() => void) | null>(null);
+  const backspaceMathInputRef = useRef<(() => void) | null>(null);
+  const moveCursorRightRef = useRef<(() => void) | null>(null);
+
 
   useEffect(() => {
     drawGraph();
@@ -42,9 +50,24 @@ export default function GraphingCalculator() {
         // Derivatives might fail, we'll use function-based detection
       }
 
+      // Check for exact mathematical points first (x = 0)
+      if (xMinVal <= 0 && xMaxVal >= 0) {
+        try {
+          const yAtZero = compiled.evaluate({ x: 0 });
+          if (Number.isFinite(yAtZero)) {
+            // Check for x-intercept at x=0
+            if (Math.abs(yAtZero) < tolerance && (yMinVal <= 0 && yMaxVal >= 0)) {
+              importantPoints.push({ x: 0, y: 0, type: 'x-intercept' });
+            } else {
+              // Check for y-intercept at x=0
+              importantPoints.push({ x: 0, y: yAtZero, type: 'y-intercept' });
+            }
+          }
+        } catch {}
+      }
+
       // Sample function values to find local extrema directly
       const sampleData: { x: number; y: number }[] = [];
-      let yInterceptAdded = false;
 
       for (let x = xMinVal; x <= xMaxVal; x += sampleStep) {
         try {
@@ -52,22 +75,33 @@ export default function GraphingCalculator() {
           if (Number.isFinite(y)) {
             sampleData.push({ x, y });
 
-            // Check for x-intercepts (where y ≈ 0)
-            if (Math.abs(y) < tolerance && (yMinVal <= 0 && yMaxVal >= 0)) {
+            // Check for x-intercepts (where y ≈ 0) - but skip x=0 as we already checked it
+            if (Math.abs(x) > sampleStep && Math.abs(y) < tolerance && (yMinVal <= 0 && yMaxVal >= 0)) {
+              // Refine the x-intercept using binary search
+              let lowX = x - sampleStep;
+              let highX = x;
+              let refinedX = x;
+              
+              // Binary search to find exact root
+              for (let refine = 0; refine < 20; refine++) {
+                const midX = (lowX + highX) / 2;
+                const midY = compiled.evaluate({ x: midX });
+                
+                if (Math.abs(midY) < tolerance) {
+                  refinedX = midX;
+                  break;
+                } else if (midY * compiled.evaluate({ x: lowX }) < 0) {
+                  highX = midX;
+                } else {
+                  lowX = midX;
+                }
+              }
+              
               const isDuplicate = importantPoints.some(
-                (p) => p.type === 'x-intercept' && Math.abs(p.x - x) < snapThreshold
+                (p) => p.type === 'x-intercept' && Math.abs(p.x - refinedX) < snapThreshold
               );
               if (!isDuplicate) {
-                importantPoints.push({ x, y: 0, type: 'x-intercept' });
-              }
-            }
-
-            // Check for y-intercept (x ≈ 0) - only once
-            if (!yInterceptAdded && Math.abs(x) < sampleStep && x >= 0) {
-              const yIntercept = compiled.evaluate({ x: 0 });
-              if (Number.isFinite(yIntercept)) {
-                importantPoints.push({ x: 0, y: yIntercept, type: 'y-intercept' });
-                yInterceptAdded = true;
+                importantPoints.push({ x: refinedX, y: 0, type: 'x-intercept' });
               }
             }
           }
@@ -209,39 +243,67 @@ export default function GraphingCalculator() {
 
       // Find inflection points using second derivative
       if (compiledSecondDeriv) {
+        // First check for exact zero at x=0
+        if (xMinVal <= 0 && xMaxVal >= 0) {
+          try {
+            const secondDerivAtZero = compiledSecondDeriv.evaluate({ x: 0 });
+            if (Number.isFinite(secondDerivAtZero) && Math.abs(secondDerivAtZero) < tolerance) {
+              const yAtZero = compiled.evaluate({ x: 0 });
+              if (Number.isFinite(yAtZero)) {
+                importantPoints.push({ x: 0, y: yAtZero, type: 'inflection' });
+              }
+            }
+          } catch {}
+        }
+        
+        // Then check for other inflection points using sign changes
         let prevSecondDeriv: number | null = null;
         for (let x = xMinVal; x <= xMaxVal; x += sampleStep * 2) {
           try {
+            // Skip x=0 as we already checked it
+            if (Math.abs(x) < sampleStep) {
+              prevSecondDeriv = compiledSecondDeriv.evaluate({ x });
+              continue;
+            }
+            
             const secondDerivVal = compiledSecondDeriv.evaluate({ x });
             if (Number.isFinite(secondDerivVal) && prevSecondDeriv !== null) {
-              // Sign change indicates inflection point
+              // Check for exact zero or sign change
               if (
+                Math.abs(secondDerivVal) < tolerance ||
                 (prevSecondDeriv > tolerance && secondDerivVal < -tolerance) ||
                 (prevSecondDeriv < -tolerance && secondDerivVal > tolerance)
               ) {
-                // Binary search for exact zero
-                let lowX = x - sampleStep * 2;
-                let highX = x;
-                for (let refine = 0; refine < 15; refine++) {
-                  const midX = (lowX + highX) / 2;
-                  const midSecondDeriv = compiledSecondDeriv.evaluate({ x: midX });
+                let refinedX = x;
+                
+                // If it's not already at zero, refine using binary search
+                if (Math.abs(secondDerivVal) >= tolerance) {
+                  let lowX = x - sampleStep * 2;
+                  let highX = x;
                   
-                  if (Math.abs(midSecondDeriv) < tolerance) {
-                    const refinedY = compiled.evaluate({ x: midX });
-                    if (Number.isFinite(refinedY)) {
-                      const isDuplicate = importantPoints.some(
-                        (p) => p.type === 'inflection' && Math.abs(p.x - midX) < snapThreshold
-                      );
-                      
-                      if (!isDuplicate) {
-                        importantPoints.push({ x: midX, y: refinedY, type: 'inflection' });
-                      }
+                  for (let refine = 0; refine < 20; refine++) {
+                    const midX = (lowX + highX) / 2;
+                    const midSecondDeriv = compiledSecondDeriv.evaluate({ x: midX });
+                    
+                    if (Math.abs(midSecondDeriv) < tolerance) {
+                      refinedX = midX;
+                      break;
+                    } else if (midSecondDeriv * compiledSecondDeriv.evaluate({ x: lowX }) < 0) {
+                      highX = midX;
+                    } else {
+                      lowX = midX;
                     }
-                    break;
-                  } else if (midSecondDeriv * compiledSecondDeriv.evaluate({ x: lowX }) < 0) {
-                    highX = midX;
-                  } else {
-                    lowX = midX;
+                  }
+                }
+                
+                const refinedY = compiled.evaluate({ x: refinedX });
+                if (Number.isFinite(refinedY)) {
+                  const isDuplicate = importantPoints.some(
+                    (p) => p.type === 'inflection' && Math.abs(p.x - refinedX) < snapThreshold
+                  );
+                  
+                  if (!isDuplicate) {
+                    importantPoints.push({ x: refinedX, y: refinedY, type: 'inflection' });
                   }
                 }
               }
@@ -653,17 +715,24 @@ export default function GraphingCalculator() {
     const width = canvas.width;
     const height = canvas.height;
 
+    // Convert click position to graph coordinates
+    const clickGraphX = xMinVal + (canvasX / width) * (xMaxVal - xMinVal);
+    const clickGraphY = yMaxVal - (canvasY / height) * (yMaxVal - yMinVal);
+
     // First check if we're near an important point (snap to it)
-    const snapDistance = 30; // pixels
+    // Use mathematical distance, not pixel distance
+    const xRange = xMaxVal - xMinVal;
+    const yRange = yMaxVal - yMinVal;
+    const snapThreshold = Math.min(xRange, yRange) * 0.05; // 5% of smaller range
     let snappedPoint = null as { x: number; y: number; type: string } | null;
-    let minSnapDist = snapDistance;
+    let minSnapDist = snapThreshold;
 
     for (const importantPoint of importantPointsRef.current) {
-      const impCanvasX = ((importantPoint.x - xMinVal) / (xMaxVal - xMinVal)) * width;
-      const impCanvasY = height - ((importantPoint.y - yMinVal) / (yMaxVal - yMinVal)) * height;
-      const dist = Math.sqrt(
-        Math.pow(canvasX - impCanvasX, 2) + Math.pow(canvasY - impCanvasY, 2)
-      );
+      // Calculate distance in graph coordinates
+      const dx = importantPoint.x - clickGraphX;
+      const dy = importantPoint.y - clickGraphY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
       if (dist < minSnapDist) {
         minSnapDist = dist;
         snappedPoint = importantPoint;
@@ -676,18 +745,18 @@ export default function GraphingCalculator() {
       return;
     }
 
-    // Otherwise, find closest point on function
+    // Otherwise, find closest point on function using graph coordinates
     const points = functionPointsRef.current;
     if (points.length === 0) return;
 
     let closestPoint = points[0];
     let minDist = Math.sqrt(
-      Math.pow(canvasX - closestPoint.canvasX, 2) + Math.pow(canvasY - closestPoint.canvasY, 2)
+      Math.pow(clickGraphX - closestPoint.x, 2) + Math.pow(clickGraphY - closestPoint.y, 2)
     );
 
     for (const point of points) {
       const dist = Math.sqrt(
-        Math.pow(canvasX - point.canvasX, 2) + Math.pow(canvasY - point.canvasY, 2)
+        Math.pow(clickGraphX - point.x, 2) + Math.pow(clickGraphY - point.y, 2)
       );
       if (dist < minDist) {
         minDist = dist;
@@ -695,8 +764,9 @@ export default function GraphingCalculator() {
       }
     }
 
-    // Only select if within reasonable distance (20 pixels)
-    if (minDist < 20) {
+    // Only select if within reasonable mathematical distance
+    const selectThreshold = Math.min(xRange, yRange) * 0.05; // 5% of smaller range
+    if (minDist < selectThreshold) {
       setSelectedPoint({ x: closestPoint.x, y: closestPoint.y });
       setIsDragging(true);
     }
@@ -766,14 +836,52 @@ export default function GraphingCalculator() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Function f(x)
-            </label>
-            <MathInput
-              value={expression}
-              onChange={setExpression}
-              placeholder="Enter function to graph"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-semibold text-gray-700">
+                Function f(x)
+              </label>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowFunctionMenu(!showFunctionMenu);
+                }}
+                onMouseDown={(e) => {
+                  // Prevent button from stealing focus from input
+                  e.preventDefault();
+                }}
+                className="p-2 rounded-lg bg-gradient-to-br from-purple-100/80 to-pink-100/80 hover:from-purple-200/80 hover:to-pink-200/80 border-2 border-purple-200/50 text-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                aria-label="Open function keyboard"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div ref={mathInputContainerRef}>
+              <MathInput
+                value={expression}
+                onChange={setExpression}
+                placeholder="Enter function to graph"
+                onMathFieldReady={(insertText, focus, backspace, moveCursorRight) => {
+                  insertTextRef.current = insertText;
+                  focusMathInputRef.current = focus;
+                  backspaceMathInputRef.current = backspace;
+                  moveCursorRightRef.current = moveCursorRight;
+                }}
+              />
+            </div>
             <p className="mt-1 text-xs text-gray-500">
               Use <code className="font-mono">x</code> as the variable. Graph updates automatically.
             </p>
@@ -883,6 +991,47 @@ export default function GraphingCalculator() {
           Click on a point to select it, then drag left/right to traverse along the function.
         </p>
       </div>
+
+      {/* Virtual Keyboard */}
+      <VirtualMathKeyboard
+        insertText={(text) => {
+          if (insertTextRef.current) {
+            insertTextRef.current(text);
+          } else {
+            // Fallback to state update if MathField not ready
+            setExpression((prev) => {
+              if (prev === null || prev === undefined) {
+                return text;
+              }
+              return prev + text;
+            });
+          }
+        }}
+        focus={() => {
+          if (focusMathInputRef.current) {
+            focusMathInputRef.current();
+          }
+        }}
+        backspace={() => {
+          if (backspaceMathInputRef.current) {
+            backspaceMathInputRef.current();
+          } else {
+            // Fallback to state update
+            setExpression((prev) => {
+              if (!prev || prev.length === 0) return prev;
+              return prev.slice(0, -1);
+            });
+          }
+        }}
+        moveCursorRight={() => {
+          if (moveCursorRightRef.current) {
+            moveCursorRightRef.current();
+          }
+        }}
+        isOpen={showFunctionMenu}
+        onClose={() => setShowFunctionMenu(false)}
+        mathInputContainerRef={mathInputContainerRef}
+      />
     </div>
   );
 }

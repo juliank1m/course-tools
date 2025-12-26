@@ -28,40 +28,103 @@ interface MathInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  onMathFieldReady?: (insertText: (text: string) => void, focus: () => void, backspace: () => void, moveCursorRight: () => void) => void;
 }
 
-// Convert LaTeX to mathjs-compatible format
-// This function converts MathQuill's LaTeX output to a format that mathjs can parse
-function latexToMathJS(latex: string): string {
-  if (!latex) return "";
+// Helper function to convert LaTeX content to mathjs
+function latexToMathJSHelper(content: string, skipFractions: boolean = false): string {
+  if (!content) return "";
   
-  let result = latex;
+  let result = content;
 
-  // Replace \left( and \right) first
+  // Replace \left( and \right) (but NOT \left| and \right| - handle those separately for absolute value)
   result = result.replace(/\\left\(/g, "(");
   result = result.replace(/\\right\)/g, ")");
 
-  // Handle fractions: \frac{numerator}{denominator}
-  // Use iterative approach to handle nested fractions
-  let changed = true;
-  let iterations = 0;
-  while (changed && iterations < 10) {
-    const prev = result;
-    result = result.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, (_, num, den) => {
-      // Convert numerator and denominator recursively, but simplify
-      const numClean = num.replace(/\{|\}/g, "");
-      const denClean = den.replace(/\{|\}/g, "");
-      return `(${numClean})/(${denClean})`;
-    });
-    changed = prev !== result;
-    iterations++;
+  // Handle fractions only if not skipping
+  if (!skipFractions) {
+    const parseBracedContent = (str: string, startPos: number): { content: string; endPos: number } => {
+      let depth = 0;
+      let content = "";
+      let pos = startPos;
+      
+      if (str[pos] !== '{') {
+        return { content: "", endPos: pos };
+      }
+      
+      pos++; // Skip opening brace
+      while (pos < str.length) {
+        if (str[pos] === '\\' && pos + 1 < str.length && str[pos + 1] === '}') {
+          content += '}';
+          pos += 2;
+          continue;
+        }
+        if (str[pos] === '\\' && pos + 1 < str.length && str[pos + 1] === '{') {
+          content += '{';
+          pos += 2;
+          continue;
+        }
+        if (str[pos] === '{') {
+          depth++;
+          content += '{';
+        } else if (str[pos] === '}') {
+          if (depth === 0) {
+            return { content, endPos: pos + 1 };
+          }
+          depth--;
+          content += '}';
+        } else {
+          content += str[pos];
+        }
+        pos++;
+      }
+      return { content, endPos: pos };
+    };
+
+    // Process fractions
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 10) {
+      const prev = result;
+      let newResult = "";
+      let i = 0;
+      
+      while (i < result.length) {
+        if (result.substr(i, 5) === '\\frac') {
+          i += 5; // Skip \frac
+          // Parse numerator
+          const numMatch = parseBracedContent(result, i);
+          if (numMatch.endPos > i) {
+            i = numMatch.endPos;
+            // Parse denominator
+            const denMatch = parseBracedContent(result, i);
+            if (denMatch.endPos > i) {
+              // Convert numerator and denominator (skip fractions in recursion to avoid infinite loops)
+              let numClean = latexToMathJSHelper(numMatch.content, true);
+              let denClean = latexToMathJSHelper(denMatch.content, true);
+              newResult += `(${numClean})/(${denClean})`;
+              i = denMatch.endPos;
+              continue;
+            }
+          }
+          // If parsing failed, keep the original
+          newResult += '\\frac';
+        } else {
+          newResult += result[i];
+          i++;
+        }
+      }
+      
+      result = newResult;
+      changed = prev !== result;
+      iterations++;
+    }
   }
 
-  // Handle sqrt: \sqrt{expr} or \sqrt[n]{expr}
-  result = result.replace(/\\sqrt\[(\d+)\]\s*\{([^{}]*)\}/g, "nthRoot($2, $1)");
-  result = result.replace(/\\sqrt\s*\{([^{}]*)\}/g, "sqrt($1)");
-
-  // Handle function commands: \sin(x), \cos(x), etc.
+  // Process other LaTeX commands (functions, symbols, superscripts, etc.)
+  // This is needed when skipFractions=true to process content inside fractions
+  
+  // Handle function commands
   result = result.replace(/\\sin\s*\(/g, "sin(");
   result = result.replace(/\\cos\s*\(/g, "cos(");
   result = result.replace(/\\tan\s*\(/g, "tan(");
@@ -75,15 +138,14 @@ function latexToMathJS(latex: string): string {
   result = result.replace(/\\cosh\s*\(/g, "cosh(");
   result = result.replace(/\\tanh\s*\(/g, "tanh(");
   result = result.replace(/\\ln\s*\(/g, "ln(");
+  // Don't convert \log here - handle it specially for log with base
+  // Only convert standalone \log( without subscript
   result = result.replace(/\\log\s*\(/g, "log(");
   result = result.replace(/\\exp\s*\(/g, "exp(");
-  result = result.replace(/\\abs\s*\{([^{}]*)\}/g, "abs($1)");
-  result = result.replace(/\\floor\s*\{([^{}]*)\}/g, "floor($1)");
-  result = result.replace(/\\ceil\s*\{([^{}]*)\}/g, "ceil($1)");
 
   // Replace Greek letters and symbols
   result = result.replace(/\\pi\b/g, "pi");
-  result = result.replace(/\\e\b(?!x)/g, "e"); // \e but not \exp
+  result = result.replace(/\\e\b(?!x)/g, "e");
   result = result.replace(/\\inf\b/g, "inf");
   result = result.replace(/\\infty\b/g, "inf");
   result = result.replace(/\\theta\b/g, "theta");
@@ -91,18 +153,109 @@ function latexToMathJS(latex: string): string {
   result = result.replace(/\\beta\b/g, "beta");
   result = result.replace(/\\gamma\b/g, "gamma");
 
-  // Handle superscripts: x^{2} or x^2
-  result = result.replace(/\^\{([^{}]*)\}/g, "^$1");
+  // Handle superscripts
+  result = result.replace(/\^\{([^}]+)\}/g, "^$1");
   result = result.replace(/\^([a-zA-Z0-9+\-*/().])/g, "^$1");
 
-  // Handle subscripts: x_{1} or x_1
-  result = result.replace(/_\{([^{}]*)\}/g, "_$1");
+  // Handle subscripts
+  // Convert _\{base\} to _base, but keep log subscripts for special handling
+  result = result.replace(/_\{([^}]+)\}/g, "_$1");
 
   // Handle multiplication
   result = result.replace(/\\cdot/g, "*");
 
   // Remove remaining braces
-  result = result.replace(/\{([^{}]*)\}/g, "$1");
+  result = result.replace(/\{([^{}]+)\}/g, "$1");
+
+  return result;
+}
+
+// Convert LaTeX to mathjs-compatible format
+// This function converts MathQuill's LaTeX output to a format that mathjs can parse
+// Exported for use in other components to ensure consistent conversion
+export function latexToMathJS(latex: string): string {
+  if (!latex) return "";
+  
+  // Handle log with subscript BEFORE calling helper (which converts \log to log)
+  // This ensures we catch \log_{base} patterns before they get converted
+  let result = latex;
+  
+  // First handle \log_{base}\left(arg\right) pattern (from MathQuill LaTeX output)
+  // This must match BEFORE helper processes \log
+  // Match \left(...\right) - need to match until \right) not just )
+  // Use a pattern that matches everything between \left( and \right)
+  result = result.replace(/\\log_\{([^}]+)\}\\left\(([^)]*(?:\([^)]*\)[^)]*)*)\\right\)/g, (match, base, arg) => {
+    const cleanBase = base.trim();
+    // Process the argument through helper to handle any nested LaTeX
+    const cleanArg = latexToMathJSHelper(arg.trim(), false);
+    // log_2(x) means log base 2 of x
+    // mathjs log(x, base) means log base of x, so log_2(x) -> log(x, 2)
+    return `log(${cleanArg}, ${cleanBase})`;
+  });
+  
+  // Also handle \log_{base}(arg) without \left (in case MathQuill doesn't use \left)
+  result = result.replace(/\\log_\{([^}]+)\}\s*\(([^)]+)\)/g, (match, base, arg) => {
+    const cleanBase = base.trim();
+    const cleanArg = arg.trim();
+    // log_2(x) means log base 2 of x
+    // mathjs log(x, base) means log base of x, so log_2(x) -> log(x, 2)
+    return `log(${cleanArg}, ${cleanBase})`;
+  });
+  
+  // Now process through helper
+  result = latexToMathJSHelper(result, false);
+
+  // Handle absolute value: \left|x\right| -> abs(x)
+  // This needs to be done before other replacements that might interfere
+  // Match \left|...\right| where ... can contain nested content
+  result = result.replace(/\\left\|\s*([^|]*?)\s*\\right\|/g, (match, content) => {
+    // Recursively process the content inside the absolute value
+    const processedContent = latexToMathJSHelper(content, false);
+    return `abs(${processedContent})`;
+  });
+  // Also handle single | characters (simple absolute value)
+  // Match |...| where ... doesn't contain |
+  result = result.replace(/\|\s*([^|]+?)\s*\|/g, (match, content) => {
+    const processedContent = latexToMathJSHelper(content, false);
+    return `abs(${processedContent})`;
+  });
+
+  // Handle sqrt: \sqrt{expr} or \sqrt[n]{expr}
+  result = result.replace(/\\sqrt\[(\d+)\]\s*\{([^{}]*)\}/g, "nthRoot($2, $1)");
+  result = result.replace(/\\sqrt\s*\{([^{}]*)\}/g, "sqrt($1)");
+  
+  // Handle abs, floor, ceil (these are for explicit \abs{} commands)
+  result = result.replace(/\\abs\s*\{([^{}]*)\}/g, "abs($1)");
+  result = result.replace(/\\floor\s*\{([^{}]*)\}/g, "floor($1)");
+  result = result.replace(/\\ceil\s*\{([^{}]*)\}/g, "ceil($1)");
+
+  // Handle log with subscript (base): log_base(arg) -> log(arg, base)
+  // This needs to be done after processing subscripts but BEFORE implicit multiplication
+  // After helper processing, log_2(x) should be log_2(x) (subscript converted but log_ preserved)
+  // mathjs log(x, base) means log base of x, so log_2(x) -> log(x, 2)
+  result = result.replace(/log_([a-zA-Z0-9]+)\s*\(([^)]+)\)/g, (match, base, arg) => {
+    const cleanBase = base.trim();
+    const cleanArg = arg.trim();
+    // log_2(x) means log base 2 of x, so in mathjs it's log(x, 2)
+    return `log(${cleanArg}, ${cleanBase})`;
+  });
+  
+  // Also handle log_base without parentheses: log_3 x -> log(x, 3)
+  // This must happen BEFORE implicit multiplication adds * between log_3 and x
+  result = result.replace(/log_([a-zA-Z0-9]+)\s+([a-zA-Z0-9x]+)/g, (match, base, arg) => {
+    const cleanBase = base.trim();
+    const cleanArg = arg.trim();
+    return `log(${cleanArg}, ${cleanBase})`;
+  });
+  
+  // Handle log_basearg (no space): log_3x -> log(x, 3)
+  // This handles cases where there's no space between log_3 and x
+  // Only match single-letter variables to avoid false matches
+  result = result.replace(/log_([a-zA-Z0-9]+)([a-zA-Z])(?![a-zA-Z0-9])/g, (match, base, arg) => {
+    const cleanBase = base.trim();
+    const cleanArg = arg.trim();
+    return `log(${cleanArg}, ${cleanBase})`;
+  });
 
   // Preserve spaces but normalize multiple spaces to single space
   // Don't trim - allow leading/trailing spaces if user typed them
@@ -143,6 +296,24 @@ function mathJSToLaTeX(mathjs: string): string {
   result = result.replace(/\bcosh\s*\(/g, "\\cosh\\left(");
   result = result.replace(/\btanh\s*\(/g, "\\tanh\\left(");
   result = result.replace(/\bln\s*\(/g, "\\ln\\left(");
+  
+  // Handle log(x, base) -> \log_{base}\left(x\right)
+  // This must come before the general log( replacement
+  result = result.replace(/\blog\s*\(([^,]+),\s*([^)]+)\)/g, (match, arg, base) => {
+    const cleanArg = arg.trim();
+    const cleanBase = base.trim();
+    return `\\log_{${cleanBase}}\\left(${cleanArg}\\right)`;
+  });
+  
+  // Handle log_base(arg) -> \log_{base}\left(arg\right) for display
+  // This handles the case where user types log_2(x) and we want to display it properly
+  // Note: MathQuill will output \log_{base} with braces, but we want to display it as log_base
+  result = result.replace(/\blog_([a-zA-Z0-9]+)\s*\(([^)]+)\)/g, (match, base, arg) => {
+    const cleanBase = base.trim();
+    const cleanArg = arg.trim();
+    return `\\log_{${cleanBase}}\\left(${cleanArg}\\right)`;
+  });
+  
   result = result.replace(/\blog\s*\(/g, "\\log\\left(");
   result = result.replace(/\bexp\s*\(/g, "\\exp\\left(");
   result = result.replace(/\bsqrt\s*\(/g, "\\sqrt{");
@@ -165,10 +336,68 @@ function mathJSToLaTeX(mathjs: string): string {
   return result;
 }
 
-export default function MathInput({ value, onChange, placeholder, className = "" }: MathInputProps) {
+export default function MathInput({ value, onChange, placeholder, className = "", onMathFieldReady }: MathInputProps) {
   const mathFieldRef = useRef<MathField | null>(null);
   const [internalLatex, setInternalLatex] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+
+  // Expose insertText, focus, and backspace functions to parent
+  useEffect(() => {
+    if (isMounted && mathFieldRef.current && onMathFieldReady) {
+      const insertText = (text: string) => {
+        if (mathFieldRef.current) {
+          // Use typedText to insert text - MathQuill handles special characters like ^ correctly
+          mathFieldRef.current.typedText(text);
+          // Trigger onChange to sync state
+          const latex = mathFieldRef.current.latex();
+          setInternalLatex(latex);
+          const mathjsValue = latexToMathJS(latex);
+          onChange(mathjsValue || "");
+        }
+      };
+      
+      const moveCursorRight = () => {
+        if (mathFieldRef.current) {
+          (mathFieldRef.current as any).keystroke('Right');
+        }
+      };
+
+      const focus = () => {
+        if (mathFieldRef.current) {
+          const el = (mathFieldRef.current as any).el();
+          if (el) {
+            el.focus();
+          }
+        }
+      };
+
+      const backspace = () => {
+        if (mathFieldRef.current) {
+          try {
+            // Use MathQuill's keystroke method to handle backspace properly
+            (mathFieldRef.current as any).keystroke('Backspace');
+            // Trigger onChange to sync state
+            const latex = mathFieldRef.current.latex();
+            setInternalLatex(latex);
+            const mathjsValue = latexToMathJS(latex);
+            onChange(mathjsValue || "");
+          } catch (e) {
+            // Fallback: manually delete last character from LaTeX
+            const latex = mathFieldRef.current.latex();
+            if (latex.length > 0) {
+              const newLatex = latex.slice(0, -1);
+              mathFieldRef.current.latex(newLatex);
+              setInternalLatex(newLatex);
+              const mathjsValue = latexToMathJS(newLatex);
+              onChange(mathjsValue || "");
+            }
+          }
+        }
+      };
+
+      onMathFieldReady(insertText, focus, backspace, moveCursorRight);
+    }
+  }, [isMounted, onMathFieldReady, onChange]);
 
   // Initialize internalLatex from value prop on mount
   useEffect(() => {

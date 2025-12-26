@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import MathInput from "./MathInput";
+import VirtualMathKeyboard from "./VirtualMathKeyboard";
 
 type DerivativeResult = {
   derivative: string;
@@ -15,6 +16,13 @@ export default function DerivativeCalculator() {
   const [result, setResult] = useState<DerivativeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFunctionMenu, setShowFunctionMenu] = useState(false);
+  const mathInputContainerRef = useRef<HTMLDivElement>(null);
+  const insertTextRef = useRef<((text: string) => void) | null>(null);
+  const focusMathInputRef = useRef<(() => void) | null>(null);
+  const backspaceMathInputRef = useRef<(() => void) | null>(null);
+  const moveCursorRightRef = useRef<(() => void) | null>(null);
+
 
   const handleCompute = async () => {
     setError(null);
@@ -70,14 +78,51 @@ export default function DerivativeCalculator() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Function f(x)
-            </label>
-            <MathInput
-              value={expression}
-              onChange={setExpression}
-              placeholder="Enter function, e.g. x^3 - 4x + 1"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-semibold text-gray-700">
+                Function f(x)
+              </label>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowFunctionMenu(!showFunctionMenu);
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                }}
+                className="p-2 rounded-lg bg-gradient-to-br from-purple-100/80 to-pink-100/80 hover:from-purple-200/80 hover:to-pink-200/80 border-2 border-purple-200/50 text-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                aria-label="Open function keyboard"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div ref={mathInputContainerRef}>
+              <MathInput
+                value={expression}
+                onChange={setExpression}
+                placeholder="Enter function, e.g. x^3 - 4x + 1"
+                onMathFieldReady={(insertText, focus, backspace, moveCursorRight) => {
+                  insertTextRef.current = insertText;
+                  focusMathInputRef.current = focus;
+                  backspaceMathInputRef.current = backspace;
+                  moveCursorRightRef.current = moveCursorRight;
+                }}
+              />
+            </div>
             <p className="mt-1 text-xs text-gray-500">
               Use <code className="font-mono">x</code> as the variable. You can include functions like{" "}
               <code className="font-mono">sin</code>, <code className="font-mono">cos</code>,{" "}
@@ -178,6 +223,45 @@ export default function DerivativeCalculator() {
           </div>
         </div>
       )}
+
+      {/* Virtual Keyboard */}
+      <VirtualMathKeyboard
+        insertText={(text) => {
+          if (insertTextRef.current) {
+            insertTextRef.current(text);
+          } else {
+            setExpression((prev) => {
+              if (prev === null || prev === undefined) {
+                return text;
+              }
+              return prev + text;
+            });
+          }
+        }}
+        focus={() => {
+          if (focusMathInputRef.current) {
+            focusMathInputRef.current();
+          }
+        }}
+        backspace={() => {
+          if (backspaceMathInputRef.current) {
+            backspaceMathInputRef.current();
+          } else {
+            setExpression((prev) => {
+              if (!prev || prev.length === 0) return prev;
+              return prev.slice(0, -1);
+            });
+          }
+        }}
+        moveCursorRight={() => {
+          if (moveCursorRightRef.current) {
+            moveCursorRightRef.current();
+          }
+        }}
+        isOpen={showFunctionMenu}
+        onClose={() => setShowFunctionMenu(false)}
+        mathInputContainerRef={mathInputContainerRef}
+      />
     </div>
   );
 }

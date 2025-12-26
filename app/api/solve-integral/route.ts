@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { parse, compile } from "mathjs";
+import { latexToMathJS } from "@/app/tools/calculus/components/MathInput";
 
 export const runtime = "nodejs";
 
 // Normalize the user expression into a canonical math syntax using mathjs.
-// This helps avoid ambiguity with exponents and implicit multiplication.
+// This uses the same conversion logic as MathInput to ensure consistency.
 function canonicalizeExpression(expression: string): {
   canonical: string;
   original: string;
@@ -15,6 +16,7 @@ function canonicalizeExpression(expression: string): {
     return { canonical: trimmed, original: trimmed };
   }
 
+  // First try parsing directly (expression should already be in mathjs format from MathInput)
   try {
     const node = parse(trimmed);
     return {
@@ -22,8 +24,18 @@ function canonicalizeExpression(expression: string): {
       original: trimmed,
     };
   } catch {
-    // If parsing fails, fall back to the raw user input
-    return { canonical: trimmed, original: trimmed };
+    // If parsing fails, it might be LaTeX format - convert using the same logic as MathInput
+    try {
+      const converted = latexToMathJS(trimmed);
+      const node = parse(converted);
+      return {
+        canonical: node.toString(),
+        original: trimmed,
+      };
+    } catch {
+      // If both fail, fall back to the raw user input
+      return { canonical: trimmed, original: trimmed };
+    }
   }
 }
 
