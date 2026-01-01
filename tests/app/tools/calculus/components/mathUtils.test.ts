@@ -1,4 +1,4 @@
-import { normalizeExpression, compileExpression } from './mathUtils';
+import { normalizeExpression, compileExpression } from '@/app/tools/calculus/components/mathUtils';
 import { parse } from 'mathjs';
 
 describe('mathUtils', () => {

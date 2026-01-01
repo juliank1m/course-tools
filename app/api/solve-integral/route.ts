@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { parse, compile } from "mathjs";
 import { latexToMathJS } from "@/app/tools/calculus/components/MathInput";
-import { globalRateLimit } from "@/lib/rateLimit";
+import { globalRateLimit } from "@/app/lib/rateLimit";
 
 export const runtime = "nodejs";
 

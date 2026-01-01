@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { globalRateLimit } from "@/lib/rateLimit";
+import { globalRateLimit } from "@/app/lib/rateLimit";
 
 // Force Node.js runtime to avoid Edge runtime issues with openai-node SDK
 export const runtime = "nodejs";

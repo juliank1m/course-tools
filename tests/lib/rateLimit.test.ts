@@ -1,4 +1,4 @@
-import { rateLimit, globalRateLimit, GLOBAL_RATE_LIMIT } from './rateLimit';
+import { rateLimit, globalRateLimit, GLOBAL_RATE_LIMIT } from '@/app/lib/rateLimit';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Mock NextRequest constructor
