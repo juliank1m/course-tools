@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { globalRateLimit } from "@/lib/rateLimit";
 
 // Force Node.js runtime to avoid Edge runtime issues with openai-node SDK
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  // Global rate limiting: 30 requests per 15 minutes per IP across ALL endpoints
+  const rateLimitResponse = globalRateLimit(request);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const { code } = await request.json();
 

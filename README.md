@@ -10,7 +10,7 @@ Course Tools is a web application that provides quick, reliable calculators and 
 - **[x]** Light, pastel UI theme consistent across tools  
 - **[x]** Deployed on Vercel
 
-Some tools use a paid OpenAI API behind the scenes; access is password-protected to prevent abuse and control costs.
+Some tools use a paid OpenAI API behind the scenes; rate limiting is in place to prevent abuse and control costs.
 
 ### Feature Checklist
 
@@ -54,12 +54,11 @@ Some tools use a paid OpenAI API behind the scenes; access is password-protected
   - **[ ]** Logical equivalence checker  
   - **[ ]** Proof assistant / checker  
 
-### Access & Authentication
+### Access & Rate Limiting
 
-- **[x]** Password-protected site using a single shared password stored in `PASSWORD` env var  
-- **[x]** `/login` page with pastel theme and JKCT branding  
-- **[x]** Secure auth cookie (`jkct_auth`) checked via `middleware.ts`  
-- **[x]** Static assets and login API allowed without auth  
+- **[x]** Public site access (no password required)  
+- **[x]** IP-based rate limiting on OpenAI API endpoints (30 requests per 15 minutes per IP)  
+- **[x]** Rate limiting prevents abuse and controls API costs  
 - **[ ]** Per-user accounts and roles  
 
 ### Infrastructure & DX

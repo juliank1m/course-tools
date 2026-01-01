@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { parse, compile } from "mathjs";
 import { latexToMathJS } from "@/app/tools/calculus/components/MathInput";
+import { globalRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -74,6 +75,12 @@ function computeNumericDefiniteIntegral(
 }
 
 export async function POST(request: NextRequest) {
+  // Global rate limiting: 30 requests per 15 minutes per IP across ALL endpoints
+  const rateLimitResponse = globalRateLimit(request);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const { expression, lower, upper } = await request.json();
 

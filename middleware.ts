@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const AUTH_COOKIE_NAME = "jkct_auth";
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Allow public routes needed for login and static assets
-  const publicPaths = ["/login", "/api/login"];
-  if (publicPaths.includes(pathname)) {
-    return NextResponse.next();
-  }
 
   // Allow Next.js internals and static assets
   if (
@@ -29,15 +21,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const authCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-
-  if (authCookie === "1") {
-    return NextResponse.next();
-  }
-
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("next", pathname || "/");
-  return NextResponse.redirect(loginUrl);
+  // All routes are now public (password protection removed)
+  // Rate limiting is handled in individual API routes
+  return NextResponse.next();
 }
 
 export const config = {
