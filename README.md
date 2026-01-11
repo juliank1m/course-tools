@@ -1,91 +1,218 @@
-## Course Tools
+# Course Tools
 
-A collection of helpful calculators and utilities designed to streamline time-consuming tasks across various academic courses. Whether you're working through linear algebra problems, solving calculus equations, balancing chemical reactions, or analyzing algorithms, Course Tools aims to make your academic work more efficient.
+> A fast, student-friendly suite of academic calculators and problem-solving aids
 
-### What is Course Tools?
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-App%20Router-black.svg)](https://nextjs.org/docs/app)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Tools](https://img.shields.io/badge/Tools-8-green.svg)](#tool-catalog)
+[![Deploy](https://img.shields.io/badge/Deploy-Vercel-black.svg)](https://vercel.com/)
 
-Course Tools is a web application that provides quick, reliable calculators and problem-solving aids for common academic tasks.
+**Course Tools** makes common coursework tasks faster with reliable, focused tools for linear algebra, calculus, and computer science. It keeps the interface simple, produces clean results, and adds optional AI explanations where helpful.
 
-- **[x]** Built with Next.js App Router, TypeScript, and Tailwind CSS  
-- **[x]** Light, pastel UI theme consistent across tools  
-- **[x]** Deployed on Vercel
+## Table of Contents
 
-Some tools use a paid OpenAI API behind the scenes; rate limiting is in place to prevent abuse and control costs.
+- [Why Course Tools?](#why-course-tools)
+- [Design Principles](#design-principles)
+- [How to Use the Tools](#how-to-use-the-tools)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Core Systems](#core-systems)
+  - [Tool Catalog](#tool-catalog)
+  - [AI Explanations](#ai-explanations)
+  - [Rate Limiting](#rate-limiting)
+- [Roadmap](#roadmap)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
 
-### Feature Checklist
+---
 
-- **Linear Algebra**
-  - **[x]** Basic matrix utilities (determinant, transpose)  
-  - **[x]** Matrix multiplication  
-  - **[x]** Matrix inverse  
-  - **[x]** Eigenvalues and eigenvectors  
+## Why Course Tools?
 
-- **Calculus**
-  - **[x]** Tabbed calculus tools page  
-  - **[x]** Derivative calculator
-    - **[x]** Uses `mathjs` to parse expressions and compute derivatives  
-    - **[x]** Uses OpenAI to generate explanations  
-    - **[x]** Evaluates \( f'(x) \) at a point with rounding to avoid FP noise  
-  - **[x]** Integral calculator
-    - **[x]** Supports definite and indefinite integrals  
-    - **[x]** Uses `mathjs` + trapezoidal rule for reliable numeric definite integrals  
-    - **[x]** Uses OpenAI to explain the result and show a clean integral expression  
-    - **[x]** Rounds numeric output to 5 decimals to hide tiny FP errors  
-  - **[ ]** Limit calculator  
-  - **[ ]** Series / Taylor expansion tools  
-  - **[ ]** Function graphing  
+Academic workflows are full of repeatable, mechanical tasks. Course Tools focuses on the high-friction steps and removes them.
 
-- **Computer Science**
-  - **[x]** CS tools hub with tabs  
-  - **[x]** Big-O complexity analyzer
-    - **[x]** Pattern-matching mode (runs fully in the browser)  
-    - **[x]** OpenAI-powered analysis mode via `/api/analyze-complexity`  
-  - **[x]** Number base converter (binary / octal / decimal / hex)  
-  - **[ ]** Additional CS utilities (regex tester, data-structure helpers, etc.)  
+| Problem | Solution |
+|---------|----------|
+| Manual matrix operations | Fast matrix utilities and multiplication |
+| Slow calculus checks | Derivative + integral calculators with clean outputs |
+| Big-O guesswork | Pattern-based and AI-assisted complexity analysis |
+| Too much UI noise | A single, consistent UI across all tools |
 
-- **Chemistry**
-  - **[ ]** Molar mass calculator  
-  - **[ ]** Stoichiometry helpers  
-  - **[ ]** pH / pOH tools  
-  - **[ ]** Equation balancing  
+The goal is simple: save time without hiding the math.
 
-- **Proofs & Logic**
-  - **[ ]** Truth table generator  
-  - **[ ]** Logical equivalence checker  
-  - **[ ]** Proof assistant / checker  
+---
 
-### Access & Rate Limiting
+## Design Principles
 
-- **[x]** Public site access (no password required)  
-- **[x]** IP-based rate limiting on OpenAI API endpoints (30 requests per 15 minutes per IP)  
-- **[x]** Rate limiting prevents abuse and controls API costs  
-- **[ ]** Per-user accounts and roles  
+| Principle | What It Means |
+|-----------|---------------|
+| **Clarity over cleverness** | Results are readable and precise |
+| **Consistency** | Common UI patterns across every tool |
+| **Fast feedback** | Browser-first where possible; API only when needed |
+| **Trustworthy math** | mathjs for computation, careful rounding for FP noise |
+| **Scalable architecture** | Add new tools without redesigning the app |
 
-### Infrastructure & DX
+---
 
-- **[x]** ESLint + TypeScript setup  
-- **[x]** Tailwind CSS with custom globals and gradients  
-- **[x]** OpenAI integration wired via environment variables (`OPENAI_API_KEY`, optional `OPENAI_MODEL`)  
-- **[ ]** Automated tests for core calculators  
-- **[ ]** CI checks for linting and type safety  
+## How to Use the Tools
 
-### Future Plans
+Just open a tool, paste your input, and run it. Each tool is designed to be self-contained with minimal configuration.
 
-- **Short Term**
-  - **[ ]** Expand linear algebra tools (multiplication, inverse, eigenvalues, eigenvectors)  
-  - **[ ]** Add more calculus tools (limits, series, graphing)  
-  - **[ ]** Implement chemistry calculators (molar mass, stoichiometry)  
-  - **[ ]** Add more CS utilities (regex tester, data-structure visualizations)  
+### Example Inputs
 
-- **Medium Term**
-  - **[ ]** Step-by-step solution explanations across tools  
-  - **[ ]** Local history of recent calculations  
-  - **[ ]** Export to PDF / LaTeX for worked solutions  
+| Tool | Example |
+|------|---------|
+| Derivative | `sin(x^2) + 3x` |
+| Integral | `exp(-x^2)` with bounds `0..1` |
+| Matrix Multiply | `[[1,2],[3,4]]` and `[[5,6],[7,8]]` |
+| Big-O | `for i in range(n): for j in range(n): ...` |
 
-- **Long Term**
-  - **[ ]** User accounts with saved preferences and calculation history  
-  - **[ ]** Collaborative / shareable calculation links  
-  - **[ ]** Mobile app  
-  - **[ ]** Integration with note-taking tools  
-  - **[ ]** Deeper AI-powered problem-solving hints and adaptive tutoring  
+---
 
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- npm (or pnpm/yarn)
+
+### Install
+
+```bash
+npm install
+```
+
+### Run Dev Server
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000 in your browser.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      COURSE TOOLS                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐  │
+│  │ Tool Pages   │──▶│ UI Components│──▶│  Styling     │  │
+│  │ (App Router) │   │  (React)     │   │ (Tailwind)   │  │
+│  └──────────────┘   └──────────────┘   └──────────────┘  │
+│           │                     │               │       │
+│           ▼                     ▼               ▼       │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │                 Calculation Layer                 │  │
+│  │   mathjs + deterministic helpers + rounding       │  │
+│  └───────────────────────────────────────────────────┘  │
+│           │
+│           ▼
+│  ┌───────────────────────────────────────────────────┐  │
+│  │                 Optional AI Layer                 │  │
+│  │   OpenAI API for explanations + reasoning         │  │
+│  └───────────────────────────────────────────────────┘  │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Core Systems
+
+### Tool Catalog
+
+**Linear Algebra**
+- Matrix utilities (determinant, transpose)
+- Matrix multiplication
+- Matrix inverse
+- Eigenvalues and eigenvectors
+
+**Calculus**
+- Derivative calculator with explanations
+- Integral calculator (definite/indefinite)
+
+**Computer Science**
+- Big-O complexity analyzer
+- Number base converter (binary/oct/dec/hex)
+
+**Planned**
+- Limits and series tools
+- Chemistry calculators
+- Proofs and logic helpers
+
+---
+
+### AI Explanations
+
+Some tools can call an OpenAI-backed endpoint to generate step-by-step explanations. This is optional and rate-limited to keep costs predictable.
+
+---
+
+### Rate Limiting
+
+OpenAI endpoints are protected with IP-based rate limiting:
+
+- 30 requests per 15 minutes per IP
+- Public access (no accounts required)
+
+---
+
+## Roadmap
+
+**Short Term**
+- Add limits, series, and graphing tools
+- Expand chemistry helpers
+- More CS utilities (regex tester, data structures)
+
+**Medium Term**
+- Step-by-step derivations for more tools
+- Export to PDF/LaTeX
+- Local history for recent calculations
+
+**Long Term**
+- Accounts and saved preferences
+- Shareable calculation links
+- Mobile-focused UI
+
+---
+
+## Installation
+
+```bash
+git clone <your-repo-url>
+cd course-tools
+npm install
+```
+
+---
+
+## Configuration
+
+Create `.env.local` with:
+
+```
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=optional_model_name
+```
+
+---
+
+## Contributing
+
+Contributions are welcome. Open an issue or submit a PR with a clear description of the tool or fix.
+
+---
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+**Course Tools**: a focused toolkit for the tasks students do every day.
